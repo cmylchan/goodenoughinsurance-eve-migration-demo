@@ -1,0 +1,31 @@
+# LOCAL ONLY: Vault + Postgres 16 for offline development of infra/.
+# The real environment is Vault on Lightsail (infra/terraform/aws) and Postgres on Neon.
+name: claims-agent-dev
+services:
+  vault:
+    image: hashicorp/vault:2.1
+    command: vault server -config=/vault/config/vault.hcl
+    cap_add: [IPC_LOCK]
+    environment:
+      VAULT_ADDR: http://127.0.0.1:8200
+      SKIP_CHOWN: "true"
+    volumes:
+      - ./host/vault.hcl:/vault/config/vault.hcl:ro
+      - vault-file:/vault/file
+      - vault-logs:/vault/logs
+    ports:
+      - "127.0.0.1:8200:8200"
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      # Local throwaway owner, standing in for Neon's project owner role.
+      POSTGRES_USER: claims_owner
+      POSTGRES_PASSWORD: local-dev-only
+      POSTGRES_DB: postgres
+    ports:
+      - "127.0.0.1:55432:5432"
+
+volumes:
+  vault-file:
+  vault-logs:
