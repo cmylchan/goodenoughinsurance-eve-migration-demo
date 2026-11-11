@@ -1,0 +1,4 @@
+# Automatic Let's Encrypt TLS for Vault. VAULT_HOSTNAME is set by cloud-init.
+{$VAULT_HOSTNAME} {
+	reverse_proxy vault:8200
+}

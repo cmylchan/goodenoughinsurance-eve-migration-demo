@@ -1,0 +1,18 @@
+# secrets and local state: never commit
+.env*
+!.env.example
+.vercel/
+.agent/
+infra/.secrets/
+**/.terraform/
+*.tfstate*
+*.auto.tfvars
+crash.log
+
+# build output
+node_modules/
+.next/
+.eve/
+dist/
+*.log
+.DS_Store

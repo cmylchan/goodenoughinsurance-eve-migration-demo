@@ -1,0 +1,36 @@
+# Vault + Caddy on the Lightsail host. Written to /opt/vault by cloud-init.
+services:
+  vault:
+    image: hashicorp/vault:2.1
+    command: vault server -config=/vault/config/vault.hcl
+    restart: unless-stopped
+    cap_add: [IPC_LOCK]
+    environment:
+      VAULT_ADDR: http://127.0.0.1:8200
+      # vault.hcl is bind-mounted read-only, so the image must not try to chown it.
+      SKIP_CHOWN: "true"
+    volumes:
+      - ./vault.hcl:/vault/config/vault.hcl:ro
+      - vault-file:/vault/file
+      - vault-logs:/vault/logs
+    ports:
+      # Loopback only: used by vault-init.sh and vault-unseal.service on the host.
+      - "127.0.0.1:8200:8200"
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    environment:
+      VAULT_HOSTNAME: ${VAULT_HOSTNAME}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+    ports:
+      - "80:80"
+      - "443:443"
+    depends_on: [vault]
+
+volumes:
+  vault-file:
+  vault-logs:
+  caddy-data:

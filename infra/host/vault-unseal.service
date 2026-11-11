@@ -1,0 +1,15 @@
+# DEMO-ONLY PATTERN: unseals Vault after a reboot using a key stored on the same host.
+# In production this is AWS KMS auto-unseal; an unseal key never sits next to the data it protects.
+[Unit]
+Description=Unseal Vault after boot (demo only)
+After=docker.service network-online.target
+Wants=network-online.target
+Requires=docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/opt/vault/vault-init.sh unseal
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

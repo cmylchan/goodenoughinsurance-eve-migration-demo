@@ -1,0 +1,32 @@
+# Rendered by infra/terraform/aws and run once by Lightsail at first boot.
+# Installs Docker, writes the Vault + Caddy stack to /opt/vault and starts it.
+# Vault comes up UNINITIALISED: run vault-init.sh over SSH afterwards (bootstrap is not Terraform).
+#
+# Lightsail embeds this text in its own /bin/sh launch script, so the real work is written to a
+# file and run with bash.
+cat > /root/claims-agent-setup.sh <<'SETUP'
+#!/bin/bash
+set -euxo pipefail
+export DEBIAN_FRONTEND=noninteractive
+
+apt-get update -y
+apt-get install -y docker.io docker-compose-v2 jq curl
+systemctl enable --now docker
+
+install -d -m 755 /opt/vault
+install -d -m 700 /opt/vault/.secrets
+
+%{ for name, content in files ~}
+echo '${base64encode(content)}' | base64 -d > /opt/vault/${name}
+%{ endfor ~}
+chmod 755 /opt/vault/vault-init.sh
+echo 'VAULT_HOSTNAME=${vault_hostname}' > /opt/vault/.env
+
+install -m 644 /opt/vault/vault-unseal.service /etc/systemd/system/vault-unseal.service
+systemctl daemon-reload
+systemctl enable vault-unseal.service   # no-op until vault-init.sh has run; then it unseals on every boot
+
+cd /opt/vault && docker compose up -d
+touch /opt/vault/.user-data-done
+SETUP
+bash /root/claims-agent-setup.sh > /var/log/claims-agent-setup.log 2>&1
