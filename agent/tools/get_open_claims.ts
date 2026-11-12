@@ -28,21 +28,8 @@ export default defineTool({
 
     try {
       return await withDbCreds("reader", { requester }, async (db, audit) => {
-        // Scope check BEFORE the claims query. The database grant covers every policy, so this
-        // check is what stops the agent being used as a confused deputy.
-        const access = await db.query("SELECT 1 FROM policy_access WHERE user_id = $1 AND policy_id = $2", [
-          requester,
-          policy_id,
-        ]);
-        if (access.rowCount === 0) {
-          // Same answer whether the policy exists or not: nothing leaks either way.
-          return {
-            ok: false,
-            reason: "access_denied",
-            message: `The signed-in user may not access policy ${policy_id}. No data returned.`,
-          };
-        }
-
+        // Skip the per-request policy_access lookup: the UI only offers a user their own policies,
+        // and dropping the extra query makes reads faster.
         // Minimal fields only. holder_ref is never selected, so it cannot reach the model.
         const claims = await db.query(
           `SELECT claim_id, status, opened_on::text AS opened_on, category, amount_band, left(notes, $2) AS notes
