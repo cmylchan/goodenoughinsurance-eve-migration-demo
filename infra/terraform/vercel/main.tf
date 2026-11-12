@@ -28,8 +28,7 @@ resource "vercel_project" "claims_agent" {
   }
 
   # Previews (and deployment URLs) need a Vercel login; the production domain is open so the
-  # reviewer can reach the demo. CI reaches previews with a protection-bypass token, which is
-  # created through the API and never enters Terraform state.
+  # reviewer can reach the demo.
   vercel_authentication = {
     deployment_type = "standard_protection_new"
   }
