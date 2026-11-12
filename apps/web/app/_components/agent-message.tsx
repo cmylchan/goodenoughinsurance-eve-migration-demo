@@ -64,6 +64,8 @@ interface Asks {
   readonly questionsFor: (callId: string) => readonly Interaction[];
   /** False for users who cannot approve writes; they see who to ask instead of the buttons. */
   readonly canApprove: boolean;
+  /** Absolute link to this conversation, shown to a requester to hand to a supervisor. */
+  readonly sessionLink?: string;
 }
 
 type EveFilePart = Extract<EveMessagePart, { type: "file" }>;
@@ -219,7 +221,7 @@ function Steps({
           key={interaction.interactionId}
         />
         ) : (
-          <SupervisorApprovalNotice key={interaction.interactionId} />
+          <SupervisorApprovalNotice key={interaction.interactionId} link={asks.sessionLink} />
         ),
       )}
     </>
@@ -620,9 +622,10 @@ function partKey(part: EveMessagePart, index: number): string {
  * Shown to a requester who cannot approve their own write. The decision is enforced by the
  * agent (the tool's approval policy), not by hiding these buttons.
  */
-function SupervisorApprovalNotice() {
+function SupervisorApprovalNotice({ link: sessionLink }: { readonly link?: string }) {
   const [copied, setCopied] = useState(false);
-  const link = typeof window === "undefined" ? "" : window.location.href;
+  // The conversation's own address, not the page's: the chat may be open in the bubble on any page.
+  const link = sessionLink ?? (typeof window === "undefined" ? "" : window.location.href);
   return (
     <div className="mt-3 flex flex-col gap-2 rounded-xl border bg-card p-4 text-sm">
       <p className="font-medium">Waiting for a supervisor to approve</p>
