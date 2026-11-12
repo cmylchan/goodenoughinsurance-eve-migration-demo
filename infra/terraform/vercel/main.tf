@@ -5,6 +5,11 @@
 resource "vercel_project" "claims_agent" {
   name = var.project_name
 
+  # The Next.js web chat lives in apps/web and hosts the eve agent (withEve in next.config.ts).
+  framework        = "nextjs"
+  build_command    = "npm run build:web"
+  output_directory = "apps/web/.next"
+
   git_repository = {
     type              = "github"
     repo              = var.github_repo
