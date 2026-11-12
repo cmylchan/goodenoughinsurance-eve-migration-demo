@@ -45,3 +45,12 @@ resource "vercel_project_domain" "production" {
   project_id = vercel_project.claims_agent.id
   domain     = "${var.project_name}.vercel.app"
 }
+
+# Where the claims database is. Again an address only: no user, no password, no connection string.
+resource "vercel_project_environment_variable" "claims_db_host" {
+  project_id = vercel_project.claims_agent.id
+  key        = "CLAIMS_DB_HOST"
+  value      = var.claims_db_host
+  target     = ["production", "preview", "development"]
+  sensitive  = false
+}

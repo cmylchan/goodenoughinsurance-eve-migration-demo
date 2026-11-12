@@ -18,3 +18,8 @@ variable "vault_addr" {
   description = "Public URL of the customer's Vault (output `vault_url` of the aws root). An address, not a secret."
   type        = string
 }
+
+variable "claims_db_host" {
+  description = "Hostname of the claims Postgres (Neon direct endpoint). An address, not a secret: the agent has no database credential until Vault issues one."
+  type        = string
+}
