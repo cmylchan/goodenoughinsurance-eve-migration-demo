@@ -10,14 +10,13 @@ import {
   turns,
   type Activity,
 } from "eve/events";
-import { useEveAgent } from "eve/react";
-import { AlertCircleIcon, BrainIcon, PlusIcon, SquareIcon } from "lucide-react";
-import { useRef, useState } from "react";
+import type { UseEveAgentReturn } from "eve/react";
+import { AlertCircleIcon, BrainIcon, Loader2Icon, SquareIcon } from "lucide-react";
+import { useState } from "react";
 import {
   Conversation,
   ConversationContent,
   ConversationScrollButton,
-  ConversationTopFade,
 } from "@/components/ai-elements/conversation";
 import { Message, MessageContent } from "@/components/ai-elements/message";
 import {
@@ -28,58 +27,47 @@ import {
   PromptInputTextarea,
   usePromptInputAttachments,
 } from "@/components/ai-elements/prompt-input";
-import { Button } from "@/components/ui/button";
 import { Trace, TraceIcon, TraceLine, TraceTitle } from "@/components/ui/trace";
 import { cn } from "@/lib/utils";
 import { AgentMessage } from "./agent-message";
-import { WEB_CHAT_AGENT } from "@/app/eve-agent";
+import { useAssistant } from "./assistant-provider";
 
-import type { Viewer } from "@/lib/session";
-import { signOut } from "@/app/login/actions";
+/** Starter prompts, matched to what each role can do. */
+export function suggestionsFor(canApprove: boolean): readonly string[] {
+  return canApprove
+    ? [
+        "Summarize open claims for policy #2001.",
+        "Summarize open claims for policy #1042.",
+        "Show me the open claims for policy #3001.",
+      ]
+    : [
+        "Summarize open claims for policy #1042.",
+        "Flag claim 77 for review: possible duplicate invoice.",
+        "Show me the open claims for policy #2001.",
+      ];
+}
 
-const BRAND = "GoodEnough Insurance";
-const AGENT_NAME = "Claims Assistant";
+/**
+ * The shared Claims Assistant conversation. `page` fills the Claims Assistant page; `panel`
+ * fits the floating bubble. Both read the same session from <AssistantProvider>.
+ */
+export function AssistantChat({ variant }: { readonly variant: "page" | "panel" }) {
+  const { agent } = useAssistant();
+  if (!agent) {
+    return (
+      <div className="flex flex-1 items-center justify-center text-muted-foreground text-sm">
+        <Loader2Icon className="mr-2 size-4 animate-spin" /> Loading conversation…
+      </div>
+    );
+  }
+  return <ChatBody agent={agent} variant={variant} />;
+}
 
-export function AgentChat({
-  sessionId,
-  sessionless = false,
-  viewer,
-}: {
-  readonly sessionId?: string;
-  readonly sessionless?: boolean;
-  readonly viewer: Viewer;
-}) {
+function ChatBody({ agent, variant }: { readonly agent: UseEveAgentReturn; readonly variant: "page" | "panel" }) {
+  const { viewer, sessionId, sessionLink, ask } = useAssistant();
   const [cancellationError, setCancellationError] = useState<string>();
   const [hasInputText, setHasInputText] = useState(false);
-  const hasSubmittedMessage = useRef(false);
-  const replaceSessionRoute = (nextSessionId: string) => {
-    if (sessionId !== undefined) return;
-    // Framework routers (Next.js, TanStack Router) patch window.history; navigating
-    // through them would remount this route and detach the active stream.
-    History.prototype.replaceState.call(
-      window.history,
-      window.history.state,
-      "",
-      `/s/${encodeURIComponent(nextSessionId)}`,
-    );
-  };
-  const agent = useEveAgent({
-    agent: WEB_CHAT_AGENT,
-    prewarm: hasInputText,
-    initialSession:
-      sessionId === undefined
-        ? undefined
-        : {
-            sessionId,
-            streamIndex: 0,
-          },
-    resume: sessionId !== undefined,
-    onSessionChange(session) {
-      if (hasSubmittedMessage.current && session !== undefined) {
-        replaceSessionRoute(session.sessionId);
-      }
-    },
-  });
+  const compact = variant === "panel";
 
   const isBusy = agent.status === "busy";
   // A turn waiting on a person is open while the store is idle; it still takes steering and Stop.
@@ -87,125 +75,84 @@ export function AgentChat({
   const isResuming = agent.status === "resuming";
   const isEmpty = agent.messages.length === 0;
   const lastMessage = agent.messages.at(-1);
-  const isPendingAssistantShell =
-    lastMessage?.role === "assistant" && lastMessage.parts.length === 0;
+  const isPendingAssistantShell = lastMessage?.role === "assistant" && lastMessage.parts.length === 0;
   const now = activity(agent.view);
   // Show what the agent is doing until its message has something to show, unless it waits on you.
   const showPendingThinking =
     isBusy &&
     now.kind !== "waiting-on-interaction" &&
     (lastMessage?.role !== "assistant" || isPendingAssistantShell);
-  const failed =
-    isBusy || isResuming ? undefined : failure(agent.view, turns(agent.view).at(-1)?.turnId);
+  const failed = isBusy || isResuming ? undefined : failure(agent.view, turns(agent.view).at(-1)?.turnId);
   const turnFailure =
-    failed?.code === "MODEL_CALL_FAILED"
-      ? "The model is temporarily unavailable. Please try again."
-      : failed?.message;
+    failed?.code === "MODEL_CALL_FAILED" ? "The model is temporarily unavailable. Please try again." : failed?.message;
   const errorMessage = cancellationError ?? agent.error?.message ?? turnFailure;
-  const hasConversationContent = sessionless || !isEmpty || errorMessage !== undefined;
-  const showConversationLayout = isResuming || hasConversationContent;
-  const activeSessionId = sessionId ?? agent.session?.sessionId;
   // A session that ended outside eve never settles its requests, so they stay open, yet it
   // accepts no answer. Once the server says so, stop offering them.
-  const sessionEnded =
-    agent.error instanceof ClientError && agent.error.code === "session_not_active";
+  const sessionEnded = agent.error instanceof ClientError && agent.error.code === "session_not_active";
   // Answers are accepted while work runs; the server's settlement closes each request.
   const canRespond = (interactionId: string) =>
     !isResuming && !sessionEnded && interaction(agent.view, interactionId)?.status === "open";
   // A tool call can ask several questions at once, and its message part holds only the latest.
   const questionsFor = (callId: string) =>
-    interactions(agent.view).filter(
-      (input) => input.request.kind === "question" && input.call?.callId === callId,
-    );
+    interactions(agent.view).filter((input) => input.request.kind === "question" && input.call?.callId === callId);
 
   const requestCancellation = () => {
     setCancellationError(undefined);
     void agent.cancel().catch((error: unknown) => {
-      setCancellationError(toErrorMessage(error));
+      setCancellationError(error instanceof Error ? error.message : "Unable to cancel the response.");
     });
   };
 
   const handleSubmit = async (message: PromptInputMessage) => {
     const text = message.text.trim();
     if ((text.length === 0 && message.files.length === 0) || isResuming) return;
-
     setHasInputText(false);
     setCancellationError(undefined);
-    hasSubmittedMessage.current = true;
-    if (agent.session !== undefined) replaceSessionRoute(agent.session.sessionId);
-    const options = turnOpen ? { turnPolicy: "steer" as const } : undefined;
 
     if (message.files.length === 0) {
-      await agent.send(text, options);
+      await ask(text);
       return;
     }
-
     const parts: MessagePart[] = [];
-    if (text.length > 0) {
-      parts.push({ text, type: "text" });
-    }
+    if (text.length > 0) parts.push({ text, type: "text" });
     for (const file of message.files) {
-      parts.push({
-        data: file.url,
-        filename: file.filename,
-        mediaType: file.mediaType,
-        type: "file",
-      });
+      parts.push({ data: file.url, filename: file.filename, mediaType: file.mediaType, type: "file" });
     }
-
-    await agent.send(parts, options);
+    await ask(parts);
   };
 
-  const composer = (
-    <PromptInput onSubmit={handleSubmit}>
-      <PromptInputTextarea
-        disabled={isResuming}
-        onChange={(event) => setHasInputText(event.currentTarget.value.trim().length > 0)}
-        placeholder="Ask about a policy or a claim…"
-      />
-      <ComposerAction
-        hasInputText={hasInputText}
-        canCancel={turnOpen}
-        isResuming={isResuming}
-        onCancel={requestCancellation}
-      />
-    </PromptInput>
-  );
+  const showEmptyState = isEmpty && !isResuming && errorMessage === undefined;
 
   return (
-    <main className="flex h-dvh flex-col overflow-hidden bg-background text-foreground">
-      <ChatHeader canStartNewChat={activeSessionId !== undefined} viewer={viewer} />
-
-      {showConversationLayout ? (
+    <div className="flex min-h-0 flex-1 flex-col">
+      {showEmptyState ? (
+        <EmptyState compact={compact} canApprove={viewer.canApprove} onPick={(text) => void ask(text)} />
+      ) : (
         <Conversation
           className="min-h-0 flex-1"
-          initial={sessionId === undefined ? undefined : false}
-          resize={activeSessionId === undefined ? "smooth" : "instant"}
+          initial={false}
+          resize={sessionId === undefined ? "smooth" : "instant"}
           scrollRestorationKey={
-            isEmpty || activeSessionId === undefined
-              ? undefined
-              : `eve:web-chat-scroll:${activeSessionId}`
+            isEmpty || sessionId === undefined ? undefined : `eve:web-chat-scroll:${variant}:${sessionId}`
           }
         >
-          <ConversationTopFade className="top-14" />
-          <ConversationContent className="mx-auto w-full max-w-3xl gap-6 px-4 pt-20 pb-36 sm:px-6">
+          <ConversationContent
+            className={cn("mx-auto w-full gap-6", compact ? "px-4 py-4" : "max-w-3xl px-4 py-8 sm:px-6")}
+          >
             {agent.messages.map((message) =>
-              showPendingThinking &&
-              isPendingAssistantShell &&
-              message.id === lastMessage.id ? null : (
+              showPendingThinking && isPendingAssistantShell && message.id === lastMessage.id ? null : (
                 <AgentMessage
                   canApprove={viewer.canApprove}
                   canRespond={canRespond}
                   key={message.id}
                   message={message}
                   questionsFor={questionsFor}
+                  sessionLink={sessionLink}
                   view={agent.view}
                   onAnswers={async (answers) => {
                     setCancellationError(undefined);
                     await agent.respond(answers).catch((cause: unknown) => {
-                      setCancellationError(
-                        cause instanceof Error ? cause.message : "Unable to submit the answer.",
-                      );
+                      setCancellationError(cause instanceof Error ? cause.message : "Unable to submit the answer.");
                     });
                   }}
                 />
@@ -216,28 +163,59 @@ export function AgentChat({
           </ConversationContent>
           <ConversationScrollButton />
         </Conversation>
-      ) : null}
+      )}
 
-      <div
-        className={cn(
-          "mx-auto w-full px-4 sm:px-6",
-          showConversationLayout
-            ? "fixed bottom-0 left-1/2 z-20 max-w-3xl -translate-x-1/2 bg-gradient-to-t from-background via-background to-transparent pt-4 pb-6"
-            : "flex max-w-xl flex-1 flex-col items-center justify-center gap-8 pb-[10vh]",
-        )}
-      >
-        {showConversationLayout ? null : (
-          <div className="flex flex-col items-center gap-3 text-center">
-            <p className="text-muted-foreground text-sm">{BRAND}</p>
-            <h1 className="font-medium text-5xl tracking-tighter">{AGENT_NAME}</h1>
-            <p className="text-muted-foreground text-sm">
-              Ask about open claims on a policy, or ask to flag a claim for review.
-            </p>
-          </div>
-        )}
-        <div className="w-full">{composer}</div>
+      <div className={cn("w-full shrink-0", compact ? "border-t bg-card p-3" : "mx-auto max-w-3xl px-4 pt-2 pb-6 sm:px-6")}>
+        <PromptInput onSubmit={handleSubmit}>
+          <PromptInputTextarea
+            className={compact ? "min-h-12" : undefined}
+            disabled={isResuming}
+            onChange={(event) => setHasInputText(event.currentTarget.value.trim().length > 0)}
+            placeholder="Ask about a policy or a claim…"
+          />
+          <ComposerAction
+            canCancel={turnOpen}
+            hasInputText={hasInputText}
+            isResuming={isResuming}
+            onCancel={requestCancellation}
+          />
+        </PromptInput>
       </div>
-    </main>
+    </div>
+  );
+}
+
+function EmptyState({
+  compact,
+  canApprove,
+  onPick,
+}: {
+  readonly compact: boolean;
+  readonly canApprove: boolean;
+  readonly onPick: (text: string) => void;
+}) {
+  return (
+    <div className={cn("flex flex-1 flex-col justify-end gap-4 overflow-y-auto", compact ? "p-4" : "mx-auto w-full max-w-3xl px-4 py-8 sm:px-6")}>
+      <div className="flex flex-col gap-1">
+        <h2 className={cn("font-medium tracking-tight", compact ? "text-lg" : "text-3xl")}>How can I help?</h2>
+        <p className="text-muted-foreground text-sm">
+          Ask about open claims on a policy you work on, or ask to flag a claim for review.
+          {canApprove ? " As a supervisor, you can approve flags others request." : " Flags wait for a supervisor's approval."}
+        </p>
+      </div>
+      <div className="flex flex-col gap-2">
+        {suggestionsFor(canApprove).map((text) => (
+          <button
+            className="rounded-lg border bg-card px-3 py-2 text-left text-sm transition-colors hover:border-brand/40 hover:bg-brand-soft"
+            key={text}
+            onClick={() => onPick(text)}
+            type="button"
+          >
+            {text}
+          </button>
+        ))}
+      </div>
+    </div>
   );
 }
 
@@ -260,12 +238,7 @@ function ComposerAction({
   }
 
   return (
-    <PromptInputButton
-      aria-label="Stop"
-      className="absolute right-2.5 bottom-2.5"
-      onClick={onCancel}
-      variant="outline"
-    >
+    <PromptInputButton aria-label="Stop" className="absolute right-2.5 bottom-2.5" onClick={onCancel} variant="outline">
       <SquareIcon className="size-3 fill-current" />
     </PromptInputButton>
   );
@@ -287,47 +260,6 @@ function ErrorMessage({ message }: { readonly message: string }) {
         </div>
       </MessageContent>
     </Message>
-  );
-}
-
-function ChatHeader({
-  canStartNewChat,
-  viewer,
-}: {
-  readonly canStartNewChat: boolean;
-  readonly viewer: Viewer;
-}) {
-  return (
-    <header className="fixed top-0 right-0 left-0 z-20 h-14 bg-background">
-      <div className="mx-auto flex h-full w-full max-w-3xl items-center justify-between gap-3 px-4 sm:px-6">
-        <span className="truncate text-sm">
-          <span className="font-medium">{BRAND}</span>
-          <span className="text-muted-foreground"> · {AGENT_NAME}</span>
-        </span>
-        <div className="flex shrink-0 items-center gap-1">
-          <span className="hidden text-muted-foreground text-sm sm:inline">
-            {viewer.displayName} · {viewer.title}
-          </span>
-          {canStartNewChat ? (
-            <Button
-              aria-label="Start a new chat"
-              onClick={() => window.location.assign("/s")}
-              size="sm"
-              type="button"
-              variant="ghost"
-            >
-              <PlusIcon className="size-4" />
-              <span className="hidden font-normal text-sm sm:inline">New chat</span>
-            </Button>
-          ) : null}
-          <form action={signOut}>
-            <Button size="sm" type="submit" variant="ghost">
-              <span className="font-normal text-sm">Sign out</span>
-            </Button>
-          </form>
-        </div>
-      </div>
-    </header>
   );
 }
 
@@ -359,8 +291,4 @@ function activityLabel(activity: Activity): string {
     default:
       return "Thinking";
   }
-}
-
-function toErrorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : "Unable to cancel the response.";
 }

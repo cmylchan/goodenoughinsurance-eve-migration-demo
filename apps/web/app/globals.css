@@ -21,6 +21,9 @@
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
+  --color-brand: var(--brand);
+  --color-brand-foreground: var(--brand-foreground);
+  --color-brand-soft: var(--brand-soft);
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
@@ -55,6 +58,10 @@
   --input: oklch(0.916 0 0);
   --ring: oklch(0.708 0 0);
   --radius: 0.625rem;
+  /* GoodEnough brand: a deep harbour blue, with a soft tint for highlighted surfaces. */
+  --brand: oklch(0.42 0.11 252);
+  --brand-foreground: oklch(0.985 0 0);
+  --brand-soft: oklch(0.95 0.02 252);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -78,6 +85,9 @@
     --border: oklch(1 0 0 / 10%);
     --input: oklch(1 0 0 / 15%);
     --ring: oklch(0.556 0 0);
+    --brand: oklch(0.72 0.12 248);
+    --brand-foreground: oklch(0.18 0.03 252);
+    --brand-soft: oklch(0.26 0.04 252);
   }
 }
 

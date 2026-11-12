@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { currentUser } from "@/lib/session";
+import { Logo } from "@/app/_components/logo";
 import { LoginForm } from "./login-form";
 
 export default async function LoginPage() {
@@ -7,9 +8,12 @@ export default async function LoginPage() {
   return (
     <main className="flex min-h-dvh items-center justify-center bg-background px-4 text-foreground">
       <div className="flex w-full max-w-sm flex-col gap-6">
-        <div className="flex flex-col gap-1">
-          <h1 className="font-medium text-2xl tracking-tight">GoodEnough Insurance</h1>
-          <p className="text-muted-foreground text-sm">Claims Assistant · sign in</p>
+        <div className="flex flex-col gap-4">
+          <Logo />
+          <div className="flex flex-col gap-1">
+            <h1 className="font-medium text-2xl tracking-tight">Claims operations portal</h1>
+            <p className="text-muted-foreground text-sm">Sign in to the Claims Assistant</p>
+          </div>
         </div>
         <LoginForm />
         <p className="text-muted-foreground text-xs">
