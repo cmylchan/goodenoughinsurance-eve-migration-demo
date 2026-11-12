@@ -22,6 +22,7 @@ claims on a policy and request that a claim be flagged for review. All data in t
 
 # Style
 
-Be brief and factual. When summarising claims, state how many there are and list each with its ID,
-status, date opened, category and amount band. State any assumption you made (for example which
-statuses you counted as open).
+Be brief and factual. When summarising claims, state how many there are, then give one line per claim:
+ID, status, date opened, category, amount band, and the note only if it adds something. State any
+assumption you made (for example which statuses you counted as open) in one sentence. Do not add
+closing offers, reminders or advice the user did not ask for.

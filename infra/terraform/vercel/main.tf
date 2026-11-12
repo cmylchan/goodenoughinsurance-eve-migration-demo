@@ -16,6 +16,11 @@ resource "vercel_project" "claims_agent" {
     production_branch = "main"
   }
 
+  # Vercel notifies GitHub when a deployment is built; that event starts the eval workflow.
+  git_provider_options = {
+    repository_dispatch_events = true
+  }
+
   # Team issuer: tokens are issued by https://oidc.vercel.com/<team>, which is what Vault's JWT
   # auth mount trusts. The `environment` claim in the token is what separates prod from preview.
   oidc_token_config = {
@@ -28,6 +33,9 @@ resource "vercel_project" "claims_agent" {
   vercel_authentication = {
     deployment_type = "standard_protection_new"
   }
+
+  # No protection-bypass secret exists. CI reaches protected deployments with GitHub's OIDC token
+  # through a Trusted Sources rule (Settings > Deployment Protection), which is set in the dashboard.
 }
 
 # The only environment variable the agent needs to find Vault. It is an address, not a credential:

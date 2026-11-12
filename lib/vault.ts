@@ -40,7 +40,8 @@ export interface VaultDeps {
   fetch: typeof fetch;
   openClient(host: string, database: string, creds: DbCredentials): Promise<DbClient>;
   tagSpan(attributes: Record<string, string>): void;
-  env: { VAULT_ADDR?: string; CLAIMS_DB_HOST?: string; VERCEL_ENV?: string };
+  /** Reads VAULT_ADDR, CLAIMS_DB_HOST and VERCEL_ENV: addresses and an environment name, no secrets. */
+  env: Readonly<Record<string, string | undefined>>;
 }
 
 const defaultDeps = (): VaultDeps => ({

@@ -1,0 +1,92 @@
+name: Evals
+
+# Golden-path rule 3: no agent ships without passing its evals.
+#
+# Vercel tells this workflow when a deployment has finished building. The job runs the eval suite
+# against that deployment's URL and reports the result as a commit status. In the Vercel project
+# that status is a REQUIRED Deployment Check, so a build that fails its evals cannot be promoted.
+#
+# What the runner holds: nothing stored. No model key, no Vercel token, no bypass secret.
+#   - It proves its identity with GitHub's own OIDC token. Vercel Deployment Protection accepts
+#     that token through a Trusted Sources rule for this repository, and the agent's channel
+#     verifies it again before serving the eval harness.
+#   - Rubric grading runs inside the deployment, through AI Gateway with the deployment's token.
+
+on:
+  repository_dispatch:
+    types:
+      - vercel.deployment.ready # the deployment is built; production waits here for its checks
+  workflow_dispatch:
+    inputs:
+      url:
+        description: Deployment URL to evaluate
+        required: true
+
+run-name: Evals · ${{ github.event.client_payload.environment || 'manual' }} · ${{ github.event.client_payload.git.shortSha || github.sha }}
+
+concurrency:
+  group: evals-${{ github.event.client_payload.id || github.run_id }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  id-token: write # GitHub OIDC token, the runner's only identity
+  statuses: write # report the result on the deployment's commit
+
+jobs:
+  evals:
+    name: eve eval
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      TARGET_URL: ${{ github.event.client_payload.url || inputs.url }}
+      TARGET_ENV: ${{ github.event.client_payload.environment || 'preview' }}
+    steps:
+      # repository_dispatch always runs on the default branch; check out the deployment's commit.
+      - name: Check out the deployed commit
+        uses: vercel/repository-dispatch/actions/checkout@v1
+        if: github.event_name == 'repository_dispatch'
+      - uses: actions/checkout@v6
+        if: github.event_name != 'repository_dispatch'
+
+      # Sets the status to pending now, and to success or failure when the job ends.
+      # This name is what the Vercel project marks as a required Deployment Check.
+      - name: Report status to Vercel
+        uses: vercel/repository-dispatch/actions/status@v1
+        if: github.event_name == 'repository_dispatch'
+        with:
+          name: "Vercel - claims-agent-eve: evals"
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+
+      - name: Get the runner's GitHub OIDC token
+        id: oidc
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const token = await core.getIDToken(); // default audience: https://github.com/<owner>
+            core.setSecret(token);
+            core.setOutput("token", token);
+
+      # Previews get all 18 evals against claims_test. A production build (before promotion) gets
+      # the subset that neither writes nor depends on test data: it runs against claims_prod.
+      - name: Run evals
+        run: |
+          if [ "$TARGET_ENV" = "production" ]; then scope="--exclude-tag preview-only"; else scope=""; fi
+          npx eve eval --strict --url "$TARGET_URL" --max-concurrency 4 --junit .eve/junit.xml $scope
+        env:
+          # Sent as the bearer (verified by the agent's channel) and as Vercel's trusted-IDP header
+          # (accepted by Deployment Protection through the project's Trusted Sources rule).
+          EVE_EVAL_OIDC_TOKEN: ${{ steps.oidc.outputs.token }}
+
+      - name: Keep eval artifacts
+        if: always()
+        uses: actions/upload-artifact@v5
+        with:
+          name: eve-evals
+          path: .eve/evals/
+          if-no-files-found: ignore
