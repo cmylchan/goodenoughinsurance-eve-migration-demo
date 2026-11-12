@@ -1,0 +1,3 @@
+# The deployment only needs the app. Infrastructure code and local notes never ship.
+infra
+.agent
