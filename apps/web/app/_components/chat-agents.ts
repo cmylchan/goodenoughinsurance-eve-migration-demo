@@ -27,7 +27,6 @@ export const GUIDE_AGENT = "guide";
 export const CHAT_AGENTS: readonly ChatAgent[] = [
   { id: "claims", kind: "eve", label: "Claims Assistant (eve)", about: "The golden-path agent." },
   { id: "migration", kind: "eve", label: "Migration Advisor", about: "Assesses a legacy agent and opens the PR that moves it." },
-  { id: GUIDE_AGENT, kind: "guide", label: "Demo Guide", about: "Step-by-step prompts that walk you through the demo." },
   {
     id: "claims-helper",
     kind: "ai-sdk",
@@ -53,6 +52,8 @@ export const CHAT_AGENTS: readonly ChatAgent[] = [
     legacy: true,
     link: { href: "/legacy/reserve-desk/approvals", label: "Approvals screen" },
   },
+  // Last in the switchers, after the agents it sends prompts to.
+  { id: GUIDE_AGENT, kind: "guide", label: "Demo Guide", about: "Step-by-step prompts that walk you through the demo." },
 ];
 
 export function chatAgent(id: string | undefined): ChatAgent {
