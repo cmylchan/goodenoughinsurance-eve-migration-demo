@@ -15,6 +15,12 @@ type Load = { state: "loading" } | { state: "ready"; texts: readonly PhoneText[]
 
 const POLL_MS = 2000;
 
+/** "22:41" in the viewer's own time zone, from a Postgres timestamp such as "2026-11-13 22:41:07.5+00". */
+function timeOf(at: string): string {
+  const date = new Date(at.replace(" ", "T").replace(/([+-]\d{2})$/, "$1:00"));
+  return Number.isNaN(date.getTime()) ? "" : date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+}
+
 /** A phone-shaped frame with the texts sent to the signed-in user's simulated number. */
 export function PhoneScreen({ name, phone, canApprove }: { readonly name: string; readonly phone: string; readonly canApprove: boolean }) {
   const [load, setLoad] = useState<Load>({ state: "loading" });
@@ -94,15 +100,18 @@ export function PhoneScreen({ name, phone, canApprove }: { readonly name: string
           </p>
         ) : null}
         {texts.map((text) => (
-          <p
-            className={cn(
-              "max-w-[85%] whitespace-pre-wrap break-words rounded-2xl px-3 py-2 text-sm leading-snug",
-              text.direction === "in" ? "self-end rounded-br-md bg-brand text-brand-foreground" : "self-start rounded-bl-md bg-muted",
-            )}
-            key={text.id}
-          >
-            {text.body}
-          </p>
+          <div className={cn("flex max-w-[85%] flex-col gap-0.5", text.direction === "in" ? "items-end self-end" : "items-start self-start")} key={text.id}>
+            <p
+              className={cn(
+                "whitespace-pre-wrap break-words rounded-2xl px-3 py-2 text-sm leading-snug",
+                text.direction === "in" ? "rounded-br-md bg-brand text-brand-foreground" : "rounded-bl-md bg-muted",
+              )}
+            >
+              {text.body}
+            </p>
+            {/* Requests for the same claim read alike; the time tells a new one from an old one. */}
+            <span className="px-1 text-[10px] text-muted-foreground">{timeOf(text.at)}</span>
+          </div>
         ))}
       </div>
 
