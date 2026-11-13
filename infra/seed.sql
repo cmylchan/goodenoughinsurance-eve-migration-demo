@@ -160,7 +160,8 @@ COMMIT;
 -- It owns no tables; it can only pass on what it was granted WITH GRANT OPTION.
 \if :{?vault_admin}
   GRANT SELECT ON policies, claims, policy_access, agent_policy, claim_reserves TO :"vault_admin" WITH GRANT OPTION;
-  GRANT INSERT ON claim_flags TO :"vault_admin" WITH GRANT OPTION;
+  -- INSERT for the write role; SELECT so the read role can show that a flag was written.
+  GRANT SELECT, INSERT ON claim_flags TO :"vault_admin" WITH GRANT OPTION;
   -- The phone outbox role: these three privileges on this one table.
   GRANT SELECT, INSERT, UPDATE ON phone_messages TO :"vault_admin" WITH GRANT OPTION;
 \endif

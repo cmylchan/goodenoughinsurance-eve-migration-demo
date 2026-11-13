@@ -55,7 +55,7 @@ const ADJUSTER_STEPS: readonly GuideStep[] = [
     id: "write",
     title: "Request a write",
     detail:
-      "The assistant pauses for approval. Copy the link it shows and open it as sam in a private window. The wait survives restarts and redeploys.",
+      "The assistant pauses for approval. Copy the link it shows and open it as sam in a private window. The wait survives restarts and redeploys. Once approved, the flag is listed on the Data page.",
     prompt: "Flag claim 77 for review: possible duplicate invoice.",
     agent: DEFAULT_AGENT,
   },
@@ -98,7 +98,7 @@ const SUPERVISOR_STEPS: readonly GuideStep[] = [
   {
     id: "compare-data",
     title: "Compare with the Data tab",
-    detail: "Data lists the policies you may see. The assistant reads the claims behind them.",
+    detail: "Data lists the policies you may see, and every flag written on them with who approved it.",
     link: { href: "/data", label: "Open Data" },
   },
 ];
