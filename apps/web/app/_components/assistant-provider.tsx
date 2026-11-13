@@ -7,6 +7,10 @@
 // reply keeps streaming while the user moves between Home, Data and the assistant. The
 // current session id is remembered per signed-in user, so signing in as someone else never
 // shows the previous user's conversation (and eve's channel auth would refuse it anyway).
+//
+// A conversation link (/s/...) is a visit to someone else's conversation, to approve a write.
+// It is shown while that link is open and is never remembered: leaving the link returns the
+// visitor to their own conversation, so two users' chats stay separate.
 
 import { ClientError, type MessagePart } from "eve/client";
 import { activeTurn } from "eve/events";
@@ -277,32 +281,46 @@ function ConversationSlot({
     [onSessionId],
   );
 
-  // First render in the browser: a conversation link wins, else whatever this user was last in.
+  // Whether the conversation on screen was opened from a link. Such a visit is never stored.
+  const visiting = useRef(false);
+
+  // First render in the browser: an open conversation link wins, else this user's own conversation.
   useEffect(() => {
     const remembered = readStorage(storageKey);
     const initial = linkSession ?? remembered;
     handledLink.current = linkSession;
-    if (linkSession !== undefined) writeStorage(storageKey, linkSession);
+    visiting.current = linkSession !== undefined;
     setSlot({ key: 0, sessionId: initial, remembered: linkSession === undefined && remembered !== undefined });
     setSessionId(initial);
     // Runs once per signed-in user; later links are handled below.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [storageKey]);
 
-  // Following a conversation link while already in the app switches to that conversation.
+  // Following a conversation link while already in the app shows that conversation; leaving the
+  // link goes back to this user's own.
   useEffect(() => {
     if (!ready || linkSession === handledLink.current) return;
     handledLink.current = linkSession;
-    if (linkSession === undefined || linkSession === sessionIdRef.current) return;
-    setSlot((previous) => ({ key: (previous?.key ?? 0) + 1, sessionId: linkSession, remembered: false }));
-    setSessionId(linkSession);
-    writeStorage(storageKey, linkSession);
+    if (linkSession !== undefined) {
+      visiting.current = true;
+      if (linkSession === sessionIdRef.current) return;
+      setSlot((previous) => ({ key: (previous?.key ?? 0) + 1, sessionId: linkSession, remembered: false }));
+      setSessionId(linkSession);
+      return;
+    }
+    if (!visiting.current) return;
+    visiting.current = false;
+    const own = readStorage(storageKey);
+    if (own === sessionIdRef.current) return;
+    setSlot((previous) => ({ key: (previous?.key ?? 0) + 1, sessionId: own, remembered: own !== undefined }));
+    setSessionId(own);
   }, [linkSession, ready, setSessionId, storageKey]);
 
   const onSessionChange = useCallback(
     (next: string | undefined) => {
       setSessionId(next);
-      writeStorage(storageKey, next);
+      // Only this user's own conversation is remembered, never one they are visiting.
+      if (!visiting.current) writeStorage(storageKey, next);
     },
     [setSessionId, storageKey],
   );
@@ -316,6 +334,8 @@ function ConversationSlot({
 
   useEffect(() => {
     newChatRef.current = () => {
+      // A new chat is always this user's own, even when started from someone's conversation link.
+      visiting.current = false;
       store.get()?.newSession();
       onSessionChange(undefined);
       // Leaving a conversation link: the full page for a fresh chat lives at /assistant.

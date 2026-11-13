@@ -1,13 +1,14 @@
 "use client";
 
 import { PlusIcon } from "lucide-react";
+import Link from "next/link";
 import { useCallback, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { AssistantChat, migrationIntro } from "./agent-chat";
 import { AgentSwitcher } from "./agent-switcher";
 import { AiSdkChat } from "./ai-sdk-chat";
 import { useAssistant, useViewer } from "./assistant-provider";
-import { chatAgent, DEFAULT_AGENT } from "./chat-agents";
+import { agentHref, chatAgent, DEFAULT_AGENT } from "./chat-agents";
 import { EveAgentChat } from "./eve-agent-chat";
 import { GuidePanel } from "./guide-panel";
 
@@ -20,12 +21,15 @@ export function AssistantPage({
   agentId = DEFAULT_AGENT,
   linkedSession,
   assignedPolicies = "",
+  shared = false,
 }: {
   readonly agentId?: string;
   /** A session opened from a conversation link to an agent other than the Claims Assistant. */
   readonly linkedSession?: string;
   /** The viewer's assigned policies, which the fraud portal's client sends with each request. */
   readonly assignedPolicies?: string;
+  /** Opened from a conversation link (/s/...), so it may be someone else's conversation. */
+  readonly shared?: boolean;
 }) {
   const viewer = useViewer();
   const { sessionId, newChat } = useAssistant();
@@ -67,6 +71,15 @@ export function AssistantPage({
           </div>
         </div>
       </div>
+      {shared ? (
+        <p className="border-b bg-brand-soft px-4 py-2 text-center text-accent-foreground text-xs sm:px-6" role="note">
+          You opened this conversation from a link, so everyone in it sees what is said here. Your own chat is separate:{" "}
+          <Link className="font-bold underline underline-offset-2" href={agentHref(agent.id)}>
+            open it
+          </Link>
+          .
+        </p>
+      ) : null}
       {isClaims ? (
         <AssistantChat variant="page" />
       ) : agent.kind === "eve" ? (

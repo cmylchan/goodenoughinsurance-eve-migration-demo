@@ -56,8 +56,8 @@ export function EveAgentChat({
   const [slot, setSlot] = useState<{ key: number; sessionId: string | undefined }>();
 
   useEffect(() => {
+    // A conversation opened from a link is a visit: shown, but not remembered as this user's own.
     const sessionId = linkedSession ?? read(storageKey);
-    if (linkedSession !== undefined) write(storageKey, linkedSession);
     setSlot({ key: 0, sessionId });
     onSession(sessionId);
     // Runs once per agent and user.
@@ -92,7 +92,7 @@ export function EveAgentChat({
       intro={intro}
       key={slot.key}
       onSession={(sessionId) => {
-        write(storageKey, sessionId);
+        if (linkedSession === undefined || sessionId !== linkedSession) write(storageKey, sessionId);
         onSession(sessionId);
       }}
       onStale={startOver}
