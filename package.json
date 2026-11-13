@@ -58,7 +58,7 @@
   },
   "scripts": {
     "dev:web": "cd apps/web && next dev",
-    "build:web": "node infra/link-eve-services.mjs && cd apps/web && next build",
+    "build:web": "node apps/web/scripts/link-eve-services.mjs && cd apps/web && next build",
     "typecheck": "npm run build:packages && tsc --noEmit && tsc --noEmit -p apps/web",
     "test": "npm test --workspaces --if-present",
     "evals": "cd agents/claims && eve eval --strict",
