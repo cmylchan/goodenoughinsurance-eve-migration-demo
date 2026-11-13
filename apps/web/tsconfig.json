@@ -23,12 +23,14 @@
     ],
     "paths": {
       "@/*": ["./*"],
-      "@lib/*": ["../../packages/golden-path/src/*"]
+      "@lib/*": ["../../packages/golden-path/src/*"],
+      "@legacy/*": ["../../legacy/*"]
     }
   },
   "include": [
     "next-env.d.ts",
     "../../packages/golden-path/src/**/*.ts",
+    "../../legacy/**/*.ts",
     "**/*.ts",
     "**/*.tsx",
     ".next/types/**/*.ts",

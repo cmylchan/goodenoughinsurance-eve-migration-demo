@@ -44,7 +44,7 @@ export function sessionFromPath(pathname: string | null): string | undefined {
 
 /** Pages where the full assistant is on screen, so the bubble would only duplicate it. */
 export function isAssistantPage(pathname: string | null): boolean {
-  return pathname === ASSISTANT_PATH || sessionFromPath(pathname) !== undefined;
+  return pathname === ASSISTANT_PATH || (pathname?.startsWith("/s/") ?? false);
 }
 
 interface AssistantContextValue {
