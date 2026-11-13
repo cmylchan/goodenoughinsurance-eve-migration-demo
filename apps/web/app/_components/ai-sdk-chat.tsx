@@ -32,7 +32,7 @@ type ToolPart = Part & { toolName?: string; state?: string; input?: unknown; out
 export function LegacyBanner() {
   return (
     <div className="border-amber-300 border-b bg-amber-100 text-amber-950" role="note">
-      <p className="mx-auto flex max-w-3xl items-center gap-2 px-4 py-2 font-medium text-sm sm:px-6">
+      <p className="mx-auto flex max-w-5xl items-center gap-2 px-4 py-2 font-medium text-sm sm:px-6">
         <AlertTriangleIcon aria-hidden="true" className="size-4 shrink-0" />
         Legacy agent. Deliberately insecure. Test data only.
       </p>
@@ -63,7 +63,7 @@ export function AiSdkChat({ agent, headers }: { readonly agent: AiSdkAgent; read
         />
       ) : (
         <Conversation className="min-h-0 flex-1">
-          <ConversationContent className="mx-auto w-full max-w-3xl gap-6 px-4 py-8 sm:px-6">
+          <ConversationContent className="mx-auto w-full max-w-5xl gap-6 px-4 py-8 sm:px-6">
             {messages.map((message) => (
               <Message from={message.role} key={message.id}>
                 <MessageContent>
@@ -93,7 +93,7 @@ export function AiSdkChat({ agent, headers }: { readonly agent: AiSdkAgent; read
         </Conversation>
       )}
 
-      <div className="mx-auto w-full max-w-3xl shrink-0 px-4 pt-2 pb-6 sm:px-6">
+      <div className="mx-auto w-full max-w-5xl shrink-0 px-4 pt-2 pb-6 sm:px-6">
         {agent.link ? (
           <p className="mb-2 text-muted-foreground text-xs">
             Part of this agent&apos;s own app:{" "}
