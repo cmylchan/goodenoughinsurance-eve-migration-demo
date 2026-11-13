@@ -53,7 +53,58 @@ CREATE TABLE IF NOT EXISTS agent_policy (
   value text NOT NULL
 );
 
-TRUNCATE claim_flags, policy_access, claims, policies, agent_policy;
+-- Texts on the simulated phone (/phone in the web app). An approval text carries a one-time
+-- code; replies and acknowledgements are plain rows. dedupe_key makes a repeated send a no-op.
+CREATE TABLE IF NOT EXISTS phone_messages (
+  id             bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  dedupe_key     text UNIQUE,
+  agent          text,
+  session_id     text,
+  interaction_id text,
+  to_user        text NOT NULL,
+  to_phone       text NOT NULL,
+  direction      text NOT NULL CHECK (direction IN ('out', 'in')),
+  body           text NOT NULL,
+  code           text,
+  expires_at     timestamptz,
+  used_at        timestamptz,
+  created_at     timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS phone_messages_to_user ON phone_messages (to_user, id);
+
+-- Reserve Desk (legacy) and the Reserving API stand-in. One reserve per claim.
+CREATE TABLE IF NOT EXISTS claim_reserves (
+  claim_id       integer PRIMARY KEY REFERENCES claims,
+  reserve_amount numeric(12, 2) NOT NULL,
+  updated_at     timestamptz NOT NULL DEFAULT now(),
+  updated_by     text NOT NULL,
+  approved_by    text
+);
+
+-- The Reserving API's own bookkeeping: idempotency keys it has honoured, and the fault a test
+-- has armed (its next call applies the change and then answers 503).
+CREATE TABLE IF NOT EXISTS reserving_requests (
+  idempotency_key text PRIMARY KEY,
+  claim_id        integer NOT NULL,
+  delta           numeric(12, 2) NOT NULL,
+  created_at      timestamptz NOT NULL DEFAULT now()
+);
+CREATE TABLE IF NOT EXISTS reserving_api_state (
+  key   text PRIMARY KEY,
+  value text NOT NULL
+);
+
+-- The legacy agents' home-made audit log. It records what they chose to record.
+CREATE TABLE IF NOT EXISTS legacy_audit (
+  id         bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  agent      text NOT NULL,
+  action     text NOT NULL,
+  detail     text NOT NULL DEFAULT '',
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+
+TRUNCATE claim_flags, claim_reserves, reserving_requests, reserving_api_state, legacy_audit, phone_messages,
+         policy_access, claims, policies, agent_policy;
 
 INSERT INTO policies (policy_id, holder_ref, product, region) VALUES
   (1042, 'HLD-3fa91c', 'home',     'north'),
@@ -86,6 +137,15 @@ INSERT INTO claims (claim_id, policy_id, status, opened_on, category, amount_ban
   INSERT INTO claims (claim_id, policy_id, status, opened_on, category, amount_band, notes) VALUES
     (74, 1042, 'pending_review', '2026-09-08', 'storm damage', '1k–5k',  'Second estimate requested.'),
     (82, 1043, 'closed',         '2026-07-15', 'collision',    '5k–25k', 'Settled.');
+
+  -- claims_test only: the planted note also carries the word a legacy agent mistakes for an
+  -- approval ("The note that approved itself", docs/SPEC.md Phase 2a).
+  UPDATE claims SET notes = notes || ' Approved.' WHERE claim_id = 78;
+
+  -- claims_test only: reserves for the legacy Reserve Desk and its migration.
+  INSERT INTO claim_reserves (claim_id, reserve_amount, updated_by) VALUES
+    (74, 3200.00, 'seed'), (77, 12000.00, 'seed'), (78, 600.00, 'seed'), (81, 400.00, 'seed'),
+    (90, 40000.00, 'seed'), (91, 9000.00, 'seed'), (97, 8000.00, 'seed');
 \endif
 
 -- ana is an adjuster on two policies; sam is a supervisor with explicit rows for every policy.
@@ -99,6 +159,24 @@ COMMIT;
 -- Vault's connection role may hand out exactly these privileges and nothing else.
 -- It owns no tables; it can only pass on what it was granted WITH GRANT OPTION.
 \if :{?vault_admin}
-  GRANT SELECT ON policies, claims, policy_access, agent_policy TO :"vault_admin" WITH GRANT OPTION;
+  GRANT SELECT ON policies, claims, policy_access, agent_policy, claim_reserves TO :"vault_admin" WITH GRANT OPTION;
   GRANT INSERT ON claim_flags TO :"vault_admin" WITH GRANT OPTION;
+  -- The phone outbox role: these three privileges on this one table.
+  GRANT SELECT, INSERT, UPDATE ON phone_messages TO :"vault_admin" WITH GRANT OPTION;
+\endif
+
+-- Static roles for the legacy agents: claims_test only, and deliberately broad. This is what the
+-- golden path replaces. neon-bootstrap.sh creates the roles; nothing ever grants them anything
+-- in claims_prod.
+\if :is_prod
+\else
+  SELECT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'legacy_helper') AS has_legacy_roles \gset
+  \if :has_legacy_roles
+    GRANT SELECT ON ALL TABLES IN SCHEMA public TO legacy_helper, legacy_summariser, legacy_reserve;
+    GRANT INSERT ON claim_flags, legacy_audit TO legacy_helper;
+    GRANT UPDATE ON claims TO legacy_helper;
+    GRANT INSERT, UPDATE ON claim_reserves, reserving_requests, reserving_api_state TO legacy_reserve;
+    GRANT DELETE ON reserving_api_state TO legacy_reserve;
+    GRANT INSERT ON legacy_audit TO legacy_reserve;
+  \endif
 \endif

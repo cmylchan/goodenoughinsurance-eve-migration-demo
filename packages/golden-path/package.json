@@ -8,7 +8,9 @@
     "extension": {
       "source": "./extension",
       "dist": "./dist/extension",
-      "externalDependencies": ["pg"]
+      "externalDependencies": [
+        "pg"
+      ]
     }
   },
   "exports": {
@@ -23,7 +25,8 @@
     "./vault": "./src/vault.ts",
     "./db": "./src/db.ts",
     "./identity": "./src/identity.ts",
-    "./approval": "./src/approval.ts"
+    "./approval": "./src/approval.ts",
+    "./phone": "./src/phone.ts"
   },
   "scripts": {
     "build": "eve extension build",

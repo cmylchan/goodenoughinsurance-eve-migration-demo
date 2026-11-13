@@ -630,8 +630,8 @@ function SupervisorApprovalNotice({ link: sessionLink }: { readonly link?: strin
     <div className="mt-3 flex flex-col gap-2 rounded-xl border bg-card p-4 text-sm">
       <p className="font-medium">Waiting for a supervisor to approve</p>
       <p className="text-muted-foreground">
-        Nothing has been written yet. A supervisor can review and approve this request by opening this
-        conversation:
+        Nothing has been written yet. A supervisor has been sent a text and can reply to it on their phone, or
+        review and approve this request by opening this conversation:
       </p>
       <div className="flex items-center gap-2">
         <code className="min-w-0 flex-1 truncate rounded bg-muted px-2 py-1 text-xs">{link}</code>

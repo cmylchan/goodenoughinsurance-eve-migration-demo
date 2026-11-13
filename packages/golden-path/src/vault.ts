@@ -4,7 +4,9 @@ import { getVercelOidcToken } from "@vercel/oidc";
 import { trace } from "@opentelemetry/api";
 import { openClient, type DbClient, type DbCredentials } from "./db.ts";
 
-export type CredentialKind = "reader" | "writer";
+// reader and writer reach claims data. notifier reaches the phone outbox (phone_messages) and
+// nothing else, so the code that sends an approval text cannot read a claim.
+export type CredentialKind = "reader" | "writer" | "notifier";
 
 /** Who the step runs for. Recorded on the trace so it can be joined to Vault's audit log. */
 export interface Actor {

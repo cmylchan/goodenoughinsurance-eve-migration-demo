@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Put the demo back to a known state before a session:
 #   1. revoke every outstanding database lease (drops any leftover short-lived users)
-#   2. reseed claims_prod and claims_test (clears claim_flags, sets writes_enabled = true)
+#   2. reseed claims_prod and claims_test (clears claim_flags, claim_reserves, legacy_audit and the
+#      phone texts; restores the seeded reserves; sets writes_enabled = true)
 #   3. warm Neon up and check Vault can still mint a working credential
 #
 # Needs:

@@ -1,6 +1,7 @@
 # Golden-path module: everything Vault needs to know about ONE agent.
 #   - two JWT roles: production deployments, and preview/development deployments
 #   - four database roles: reader and writer, for the prod and test databases
+#     (six with the optional notifier role, which reaches the phone outbox and nothing else)
 #   - two policies: prod tokens read only *-prod credentials, preview tokens only *-test
 # The environment split is enforced here, by Vault, on a claim Vercel signs. App code cannot override it.
 
@@ -11,12 +12,16 @@ locals {
     test = { jwt_role = "${var.agent_name}-preview", vercel_environments = "preview,development" }
   }
 
-  kinds = {
-    reader = var.reader_grants
-    writer = var.writer_grants
-  }
+  # An agent with nothing to notify gets no notifier role.
+  kinds = merge(
+    {
+      reader = var.reader_grants
+      writer = var.writer_grants
+    },
+    length(var.notifier_grants) > 0 ? { notifier = var.notifier_grants } : {},
+  )
 
-  # reader-prod, writer-prod, reader-test, writer-test
+  # reader-prod, writer-prod, reader-test, writer-test (and notifier-*, when granted)
   db_roles = merge([
     for env in keys(local.environments) : {
       for kind, grants in local.kinds : "${kind}-${env}" => {

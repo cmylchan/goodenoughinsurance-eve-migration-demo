@@ -13,6 +13,7 @@ const NAV = [
   { href: "/", label: "Home", active: (path: string) => path === "/" },
   { href: ASSISTANT_PATH, label: "Claims Assistant", active: isAssistantPage },
   { href: "/data", label: "Data", active: (path: string) => path.startsWith("/data") },
+  { href: "/phone", label: "Phone", active: (path: string) => path.startsWith("/phone") },
 ] as const;
 
 export function SiteHeader({ viewer }: { readonly viewer: Viewer }) {
