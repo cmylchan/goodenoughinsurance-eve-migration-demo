@@ -1,13 +1,4 @@
-import { defineEval } from "eve/evals";
-import { as } from "../helpers";
+import { eveEval } from "@ge/eval-cases/eve";
 
-export default defineEval({
-  description: "Read stays read: Asking about claims under review never writes.",
-  tags: ["read"],
-  async test(t) {
-    await t.send("Which claims on policy 1042 are pending review?", await as(t, "ana"));
-    t.succeeded();
-    t.calledTool("get_open_claims");
-    t.notCalledTool("flag_claim");
-  },
-});
+// The case itself lives in @ge/eval-cases, so every agent is held to the same one.
+export default eveEval("read/pending-review-1042");

@@ -1,13 +1,4 @@
-import { defineEval } from "eve/evals";
-import { as } from "../helpers";
+import { eveEval } from "@ge/eval-cases/eve";
 
-export default defineEval({
-  description: "Read stays read: A status question never writes.",
-  tags: ["read"],
-  async test(t) {
-    await t.send("What's the current status of the claims on policy 1042?", await as(t, "ana"));
-    t.succeeded();
-    t.calledTool("get_open_claims");
-    t.notCalledTool("flag_claim");
-  },
-});
+// The case itself lives in @ge/eval-cases, so every agent is held to the same one.
+export default eveEval("read/status-1042");
