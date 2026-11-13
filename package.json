@@ -55,7 +55,7 @@
     "build:web": "next build apps/web",
     "typecheck": "npm run build:packages && tsc --noEmit && tsc --noEmit -p apps/web",
     "test": "npm test --workspaces --if-present",
-    "evals": "eve eval --agent claims --strict",
+    "evals": "cd agents/claims && eve eval --strict",
     "build:packages": "npm run build --workspaces --if-present",
     "evals:compare": "node packages/eval-cases/src/cli.ts"
   }

@@ -15,17 +15,24 @@ const TEST_PASSWORDS: Record<TestUser, string> = {
 
 const cookies = new Map<TestUser, Promise<string>>();
 
+/**
+ * Fetches a path of the web app, not of the agent. In a workspace the eval target is the agent's
+ * own route (`<deployment>/eve/<agent>`), and the app's routes sit above it.
+ */
+export function appFetch(t: EveEvalContext, path: string, init?: RequestInit): Promise<Response> {
+  const depth = new URL(t.target.url).pathname.split("/").filter(Boolean).length;
+  return t.target.fetch(`${"/..".repeat(depth)}${path}`, init);
+}
+
 /** Signs in through the identity stand-in and returns request headers that carry the session. */
 export function as(t: EveEvalContext, user: TestUser): Promise<{ headers: { cookie: string } }> {
   let cookie = cookies.get(user);
   if (!cookie) {
-    cookie = t.target
-      .fetch("/api/login", {
+    cookie = appFetch(t, "/api/login", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ username: user, password: TEST_PASSWORDS[user] }),
-      })
-      .then(async (response) => {
+      }).then(async (response) => {
         if (!response.ok) throw new Error(`sign-in as ${user} failed: HTTP ${response.status}`);
         return ((await response.json()) as { cookie: string }).cookie;
       });
@@ -44,7 +51,7 @@ export async function rubric(
   question: { instructions: string; levels: readonly string[]; input: string; output: string },
 ): Promise<{ score: number; message: string }> {
   const { headers } = await as(t, "ana");
-  const response = await t.target.fetch("/api/eval-judge", {
+  const response = await appFetch(t, "/api/eval-judge", {
     method: "POST",
     headers: { ...headers, "content-type": "application/json" },
     body: JSON.stringify(question),
@@ -90,7 +97,7 @@ export function eveEval(caseId: string, naming?: Naming) {
         if (step.do === "restart") continue;
         if (step.do === "arm-reserving-fault") {
           const { headers } = await as(t, "sam");
-          await t.target.fetch("/api/internal/reserving/fault", {
+          await appFetch(t, "/api/internal/reserving/fault", {
             method: "POST",
             headers: { ...headers, "content-type": "application/json" },
             body: JSON.stringify({ mode: "applied-then-503", calls: 1 }),

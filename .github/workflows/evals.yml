@@ -74,10 +74,13 @@ jobs:
 
       # Previews get all 18 evals against claims_test. A production build (before promotion) gets
       # the subset that neither writes nor depends on test data: it runs against claims_prod.
+      # eve addresses a workspace agent on a deployment by its own route, /eve/<agent>, and runs
+      # that agent's evals from its directory. (`--agent` only applies to a local eval server.)
       - name: Run evals
+        working-directory: agents/claims
         run: |
           if [ "$TARGET_ENV" = "production" ]; then scope="--exclude-tag preview-only"; else scope=""; fi
-          npx eve eval --agent claims --strict --url "$TARGET_URL" --max-concurrency 4 --junit .eve/junit.xml $scope
+          npx eve eval --strict --url "${TARGET_URL%/}/eve/claims" --max-concurrency 4 --junit .eve/junit.xml $scope
         env:
           # Sent as the bearer (verified by the agent's channel) and as Vercel's trusted-IDP header
           # (accepted by Deployment Protection through the project's Trusted Sources rule).
@@ -88,7 +91,5 @@ jobs:
         uses: actions/upload-artifact@v5
         with:
           name: eve-evals
-          path: |
-            .eve/evals/
-            agents/claims/.eve/evals/
+          path: agents/claims/.eve/evals/
           if-no-files-found: ignore

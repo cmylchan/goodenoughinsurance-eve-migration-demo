@@ -158,6 +158,20 @@ test("AI SDK messages are normalised: tool names, outputs, approvals", () => {
   );
 });
 
+test("a call approved in a later delivery is matched by its id", () => {
+  const names = new Map<string, string>();
+  toolCallsFromEvents([{ type: "call.requested", data: { callId: "b", capability: { kind: "tool", name: "flag_claim" } } }], (n) => n, names);
+  const later = toolCallsFromEvents(
+    [
+      { type: "call.started", data: { callId: "b" } },
+      { type: "call.settled", data: { callId: "b", outcome: "completed", output: { written: true } } },
+    ],
+    (n) => n,
+    names,
+  );
+  assert.deepEqual(later, [{ name: "flag_claim", status: "completed", output: { written: true } }]);
+});
+
 test("eve stream events are folded into tool calls", () => {
   const calls = toolCallsFromEvents(
     [
