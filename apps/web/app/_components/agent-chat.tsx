@@ -195,7 +195,7 @@ export function EveChatBody({
           }
         >
           <ConversationContent
-            className={cn("mx-auto w-full gap-6", compact ? "px-4 py-4" : "max-w-3xl px-4 py-8 sm:px-6")}
+            className={cn("mx-auto w-full gap-6", compact ? "px-4 py-4" : "max-w-5xl px-4 py-8 sm:px-6")}
           >
             {agent.messages.map((message) =>
               showPendingThinking && isPendingAssistantShell && message.id === lastMessage.id ? null : (
@@ -223,7 +223,7 @@ export function EveChatBody({
         </Conversation>
       )}
 
-      <div className={cn("w-full shrink-0", compact ? "border-t bg-card p-3" : "mx-auto max-w-3xl px-4 pt-2 pb-6 sm:px-6")}>
+      <div className={cn("w-full shrink-0", compact ? "border-t bg-card p-3" : "mx-auto max-w-5xl px-4 pt-2 pb-6 sm:px-6")}>
         <PromptInput onSubmit={handleSubmit}>
           <PromptInputTextarea
             className={compact ? "min-h-12" : undefined}
@@ -253,7 +253,7 @@ export function EmptyState({
   readonly onPick: (text: string) => void;
 }) {
   return (
-    <div className={cn("flex flex-1 flex-col justify-end gap-4 overflow-y-auto", compact ? "p-4" : "mx-auto w-full max-w-3xl px-4 py-8 sm:px-6")}>
+    <div className={cn("flex flex-1 flex-col justify-end gap-4 overflow-y-auto", compact ? "p-4" : "mx-auto w-full max-w-5xl px-4 py-8 sm:px-6")}>
       <div className="flex flex-col gap-1">
         <h2 className={cn("font-medium tracking-tight", compact ? "text-lg" : "text-3xl")}>{intro.title}</h2>
         <p className="text-muted-foreground text-sm">{intro.blurb}</p>

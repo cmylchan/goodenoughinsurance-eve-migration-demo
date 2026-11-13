@@ -5,7 +5,7 @@ export function AssistantPageSkeleton() {
   return (
     <main className="flex h-[calc(100dvh-70px)] flex-col max-md:h-[calc(100dvh-115px)]" data-fills-viewport="">
       <div className="border-b bg-muted">
-        <div className="mx-auto flex max-w-3xl items-center justify-between gap-3 px-4 py-3 sm:px-6">
+        <div className="mx-auto flex max-w-5xl items-center justify-between gap-3 px-4 py-3 sm:px-6">
           <div className="flex flex-col gap-1.5">
             <span className="h-5 w-40 animate-pulse rounded bg-border/70" />
             <span className="h-3 w-64 animate-pulse rounded bg-border/70" />

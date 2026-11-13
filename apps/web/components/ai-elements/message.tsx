@@ -278,7 +278,13 @@ const streamdownPlugins = { cjk, code, math, mermaid };
 export const MessageResponse = memo(
   ({ className, ...props }: MessageResponseProps) => (
     <Streamdown
-      className={cn("size-full [&>*:first-child]:mt-0 [&>*:last-child]:mb-0", className)}
+      className={cn(
+        "size-full [&>*:first-child]:mt-0 [&>*:last-child]:mb-0",
+        // Tables keep each column at its natural width and scroll sideways on a phone, rather than
+        // squeezing every column until dates and IDs break; only long text wraps.
+        "[&_table]:w-max [&_table]:min-w-full [&_td]:max-w-72 [&_td]:align-top [&_th]:whitespace-nowrap",
+        className,
+      )}
       plugins={streamdownPlugins}
       {...props}
     />

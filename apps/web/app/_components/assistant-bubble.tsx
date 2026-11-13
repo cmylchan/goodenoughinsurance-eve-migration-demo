@@ -1,10 +1,10 @@
 "use client";
 
 import { interactions } from "eve/events";
-import { Maximize2Icon, MessageSquareIcon, PlusIcon, XIcon } from "lucide-react";
+import { Maximize2Icon, MessageSquareIcon, Minimize2Icon, PlusIcon, SquareArrowOutUpRightIcon, XIcon } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { AssistantChat } from "./agent-chat";
@@ -16,6 +16,8 @@ export function AssistantBubble() {
   const pathname = usePathname();
   const { agent, bubbleOpen, setBubbleOpen, newChat, sessionId } = useAssistant();
   const onAssistantPage = isAssistantPage(pathname);
+  // Widened in place so a table in the conversation can show more columns, without leaving the page.
+  const [wide, setWide] = useState(false);
   // The bubble closes itself on the full assistant page, which already shows the conversation.
   useEffect(() => {
     if (onAssistantPage) setBubbleOpen(false);
@@ -32,7 +34,8 @@ export function AssistantBubble() {
       <section
         aria-label="Claims Assistant"
         className={cn(
-          "fixed right-4 bottom-24 z-40 flex h-[min(640px,calc(100dvh-8rem))] w-[min(420px,calc(100vw-2rem))] flex-col overflow-hidden rounded-[20px] border bg-background shadow-[0_24px_80px_-20px_rgb(0_0_0/0.35)] transition-all duration-200 sm:right-6",
+          "fixed right-4 bottom-24 z-40 flex flex-col overflow-hidden rounded-[20px] border bg-background shadow-[0_24px_80px_-20px_rgb(0_0_0/0.35)] transition-all duration-200 sm:right-6",
+          wide ? "h-[min(820px,calc(100dvh-8rem))] w-[min(960px,calc(100vw-3rem))]" : "h-[min(640px,calc(100dvh-8rem))] w-[min(420px,calc(100vw-2rem))]",
           bubbleOpen ? "visible translate-y-0 opacity-100" : "pointer-events-none invisible translate-y-3 opacity-0",
         )}
       >
@@ -49,9 +52,21 @@ export function AssistantBubble() {
               <PlusIcon />
             </Button>
           ) : null}
+          {/* Phones already get a near full-width panel, so widening only applies from tablet width up. */}
+          <Button
+            aria-label={wide ? "Make the chat narrower" : "Make the chat wider"}
+            aria-pressed={wide}
+            className="max-sm:hidden"
+            onClick={() => setWide(!wide)}
+            size="icon-sm"
+            title={wide ? "Narrower" : "Wider"}
+            variant="ghost"
+          >
+            {wide ? <Minimize2Icon /> : <Maximize2Icon />}
+          </Button>
           <Button aria-label="Open the full Claims Assistant" asChild size="icon-sm" title="Open full page" variant="ghost">
             <Link href={ASSISTANT_PATH}>
-              <Maximize2Icon />
+              <SquareArrowOutUpRightIcon />
             </Link>
           </Button>
           <Button aria-label="Close" onClick={() => setBubbleOpen(false)} size="icon-sm" variant="ghost">

@@ -34,6 +34,7 @@ Rules:
   say what you did. Do not ask the user about it.
 - Flagging a claim needs an approval. Call flagClaim; if it says approval is needed, ask the user to reply "approved".
 - Include the policyholder reference in summaries so adjusters can find the file.
+- Show lists of claims as a Markdown table, one row per claim.
 - Be brief.`;
 
 // who is asking: read from the login cookie. good enough for showing the name.
