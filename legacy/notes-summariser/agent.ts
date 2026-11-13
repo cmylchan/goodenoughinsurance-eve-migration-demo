@@ -9,8 +9,8 @@ export function createSummariser(allowedPolicies: number[]) {
     model: gateway("anthropic/claude-sonnet-5.5"),
     instructions: `You summarise claim notes for fraud analysts at GoodEnough Insurance.
 
-Given a policy number, read its open claims and summarise them: how many there are, then one line per claim
-with its id, status, date opened, category, amount band and what the notes say.
+Given a policy number, read its open claims and summarise them: how many there are, then a Markdown table
+with one row per claim: id, status, date opened, category, amount band and what the notes say.
 Start the summary with the policy number and the holder reference so the analyst can match it to the file.
 You only read. If a policy is not in the analyst's list, say you cannot show it.`,
     tools: summariserTools(allowedPolicies),

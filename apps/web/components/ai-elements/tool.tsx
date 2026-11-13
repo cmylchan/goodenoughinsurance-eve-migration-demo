@@ -4,10 +4,7 @@ import { cn } from "@/lib/utils";
 import type { ComponentProps, ReactNode } from "react";
 import { isValidElement } from "react";
 
-import { CodeBlock } from "./code-block";
-
-const compactCodeBlockClassName =
-  "rounded-none border-0 bg-transparent [&_pre]:!bg-transparent [&_pre]:px-3 [&_pre]:pt-2 [&_pre]:pb-3 [&_pre]:text-xs [&_code]:text-xs";
+import { DataView } from "./data-view";
 
 export type BashToolContentProps = ComponentProps<"div"> & {
   input: unknown;
@@ -69,20 +66,18 @@ export type ToolInputProps = ComponentProps<"div"> & {
   input: unknown;
 };
 
-export const ToolInput = ({ className, input, ...props }: ToolInputProps) => (
-  <div className={cn("overflow-hidden rounded-md bg-muted/50", className)} {...props}>
-    <span className="block px-3 pt-3 font-sans text-[10px] text-muted-foreground uppercase tracking-wide">
-      Parameters
-    </span>
-    <div>
-      <CodeBlock
-        className={compactCodeBlockClassName}
-        code={JSON.stringify(input, null, 2)}
-        language="json"
-      />
+export const ToolInput = ({ className, input, ...props }: ToolInputProps) => {
+  // A call with no arguments has nothing to show.
+  if (input === undefined || input === null || (typeof input === "object" && Object.keys(input).length === 0)) {
+    return null;
+  }
+  return (
+    <div className={cn("overflow-hidden rounded-md bg-muted/50 p-3", className)} {...props}>
+      <span className="mb-2 block font-sans text-[10px] text-muted-foreground uppercase tracking-wide">Parameters</span>
+      <DataView raw={false} value={input} />
     </div>
-  </div>
-);
+  );
+};
 
 export type ToolOutputProps = ComponentProps<"div"> & {
   output: unknown;
@@ -94,33 +89,22 @@ export const ToolOutput = ({ className, output, errorText, ...props }: ToolOutpu
     return null;
   }
 
-  let Output = <div>{output as ReactNode}</div>;
-
-  if (typeof output === "object" && !isValidElement(output)) {
-    Output = (
-      <CodeBlock
-        className={compactCodeBlockClassName}
-        code={JSON.stringify(output, null, 2)}
-        language="json"
-      />
-    );
-  } else if (typeof output === "string") {
-    Output = <CodeBlock className={compactCodeBlockClassName} code={output} language="json" />;
-  }
+  // Tool results are data: tables for lists of records, label/value rows for one record.
+  const Output = isValidElement(output) ? (output as ReactNode) : output === undefined ? null : <DataView value={output} />;
 
   return (
     <div
       className={cn(
-        "overflow-x-auto rounded-md text-xs [&_table]:w-full",
+        "rounded-md p-3 text-xs",
         errorText ? "bg-destructive/10 text-destructive" : "bg-muted/50 text-foreground",
         className,
       )}
       {...props}
     >
-      <span className="block px-3 pt-3 font-sans text-[10px] text-muted-foreground uppercase tracking-wide">
+      <span className="mb-2 block font-sans text-[10px] text-muted-foreground uppercase tracking-wide">
         {errorText ? "Error" : "Result"}
       </span>
-      {errorText && <div className="px-3 pt-2 pb-3">{errorText}</div>}
+      {errorText && <div className="pb-2">{errorText}</div>}
       {Output}
     </div>
   );
