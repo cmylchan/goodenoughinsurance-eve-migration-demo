@@ -1,5 +1,6 @@
 import { CarIcon, DatabaseIcon, HomeIcon, LockIcon, PlaneIcon, ShieldAlertIcon, type LucideIcon } from "lucide-react";
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { AskAssistantButton } from "@/app/_components/ask-assistant-button";
 import { policiesFor } from "@/lib/policies";
 import { requireViewer } from "@/lib/session";
@@ -14,25 +15,59 @@ const PRODUCTS: Readonly<Record<string, { label: string; icon: LucideIcon }>> = 
 
 const titleCase = (value: string) => value.charAt(0).toUpperCase() + value.slice(1);
 
-export default async function DataPage() {
+// The heading and explainer prerender; the table is read per request with a short-lived database
+// user, so it streams in behind a skeleton the same shape as the table.
+export default function DataPage() {
+  return (
+    <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-12 sm:px-6 md:py-16">
+      <div className="mb-8 flex flex-col gap-2">
+        <h1 className="font-display text-3xl md:text-[40px] md:leading-tight">Policies</h1>
+        <p className="max-w-2xl text-muted-foreground">
+          The policies assigned to you
+          <Suspense fallback=".">
+            <ViewerName />
+          </Suspense>{" "}
+          Claim details aren&apos;t shown here: ask the Claims Assistant, which reads them with the same access rules.
+        </p>
+      </div>
+      <Suspense fallback={<PolicyTableSkeleton />}>
+        <PolicyTable />
+      </Suspense>
+    </main>
+  );
+}
+
+async function ViewerName() {
+  const viewer = await requireViewer();
+  return <>, {viewer.displayName}.</>;
+}
+
+function PolicyTableSkeleton() {
+  return (
+    <div aria-hidden="true" className="card-float overflow-hidden">
+      <div className="h-11 border-b bg-muted" />
+      {[0, 1, 2, 3].map((row) => (
+        <div className="flex items-center gap-6 border-b px-4 py-3.5 last:border-b-0" key={row}>
+          <span className="h-4 w-14 animate-pulse rounded bg-muted" />
+          <span className="h-4 w-20 animate-pulse rounded bg-muted" />
+          <span className="ml-auto h-8 w-32 animate-pulse rounded-[5px] bg-muted" />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+async function PolicyTable() {
   const viewer = await requireViewer();
   const list = await policiesFor(viewer.id);
 
   return (
-    <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-10 sm:px-6">
-      <div className="mb-6 flex flex-col gap-1">
-        <h1 className="font-semibold text-2xl tracking-tight">Policies</h1>
-        <p className="max-w-2xl text-muted-foreground text-sm">
-          The policies assigned to you, {viewer.displayName}. Claim details aren&apos;t shown here: ask the Claims
-          Assistant, which reads them with the same access rules.
-        </p>
-      </div>
-
+    <>
       {list.ok ? (
         <>
-          <div className="overflow-hidden rounded-xl border bg-card">
+          <div className="card-float overflow-hidden">
             <table className="w-full text-sm">
-              <thead className="border-b bg-muted/50 text-left text-muted-foreground text-xs uppercase tracking-wide">
+              <thead className="border-b bg-muted text-left text-muted-foreground text-xs uppercase tracking-wide">
                 <tr>
                   <th className="px-4 py-3 font-medium" scope="col">
                     Policy
@@ -55,7 +90,7 @@ export default async function DataPage() {
                 {list.policies.map((policy) => {
                   const product = PRODUCTS[policy.product] ?? { label: titleCase(policy.product), icon: ShieldAlertIcon };
                   return (
-                    <tr key={policy.policyId}>
+                    <tr className="transition-colors hover:bg-brand-soft/40" key={policy.policyId}>
                       <td className="px-4 py-3 font-medium font-mono">#{policy.policyId}</td>
                       <td className="px-4 py-3">
                         <span className="inline-flex items-center gap-2">
@@ -96,13 +131,13 @@ export default async function DataPage() {
           </p>
         </>
       ) : (
-        <div className="rounded-xl border border-dashed bg-card px-6 py-10 text-center" role="status">
+        <div className="card-float px-6 py-10 text-center" role="status">
           <p className="font-medium">Policy records can&apos;t be reached right now.</p>
           <p className="mt-1 text-muted-foreground text-sm">
             Nothing is shown rather than anything stale. The database may be waking up: try again in a few seconds.
           </p>
         </div>
       )}
-    </main>
+    </>
   );
 }

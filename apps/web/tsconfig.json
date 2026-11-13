@@ -23,16 +23,18 @@
     ],
     "paths": {
       "@/*": ["./*"],
-      "@lib/*": ["../../lib/*"]
+      "@lib/*": ["../../packages/golden-path/src/*"],
+      "@legacy/*": ["../../legacy/*"]
     }
   },
   "include": [
     "next-env.d.ts",
-    "../../lib/**/*.ts",
+    "../../packages/golden-path/src/**/*.ts",
+    "../../legacy/**/*.ts",
     "**/*.ts",
     "**/*.tsx",
     ".next/types/**/*.ts",
     ".next/dev/types/**/*.ts"
   ],
-  "exclude": ["node_modules", "../../lib/**/*.test.ts"]
+  "exclude": ["node_modules", "../../packages/golden-path/src/**/*.test.ts"]
 }

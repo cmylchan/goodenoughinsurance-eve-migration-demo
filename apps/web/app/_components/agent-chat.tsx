@@ -12,7 +12,7 @@ import {
 } from "eve/events";
 import type { UseEveAgentReturn } from "eve/react";
 import { AlertCircleIcon, BrainIcon, Loader2Icon, SquareIcon } from "lucide-react";
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import {
   Conversation,
   ConversationContent,
@@ -30,7 +30,27 @@ import {
 import { Trace, TraceIcon, TraceLine, TraceTitle } from "@/components/ui/trace";
 import { cn } from "@/lib/utils";
 import { AgentMessage } from "./agent-message";
-import { useAssistant } from "./assistant-provider";
+import { useAssistant, useViewer } from "./assistant-provider";
+import type { Viewer } from "@/lib/session";
+
+/** What an empty conversation shows: a heading, a line of help and starter prompts. */
+export interface ChatIntro {
+  readonly title: string;
+  readonly blurb: string;
+  readonly suggestions: readonly string[];
+  readonly placeholder: string;
+}
+
+export function claimsIntro(canApprove: boolean): ChatIntro {
+  return {
+    title: "How can I help?",
+    blurb:
+      "Ask about open claims on a policy you work on, or ask to flag a claim for review." +
+      (canApprove ? " As a supervisor, you can approve flags others request." : " Flags wait for a supervisor's approval."),
+    suggestions: suggestionsFor(canApprove),
+    placeholder: "Ask about a policy or a claim…",
+  };
+}
 
 /** Starter prompts, matched to what each role can do. */
 export function suggestionsFor(canApprove: boolean): readonly string[] {
@@ -52,19 +72,57 @@ export function suggestionsFor(canApprove: boolean): readonly string[] {
  * fits the floating bubble. Both read the same session from <AssistantProvider>.
  */
 export function AssistantChat({ variant }: { readonly variant: "page" | "panel" }) {
-  const { agent } = useAssistant();
-  if (!agent) {
-    return (
-      <div className="flex flex-1 items-center justify-center text-muted-foreground text-sm">
-        <Loader2Icon className="mr-2 size-4 animate-spin" /> Loading conversation…
-      </div>
-    );
-  }
-  return <ChatBody agent={agent} variant={variant} />;
+  return (
+    <Suspense fallback={<LoadingConversation />}>
+      <AssistantChatBody variant={variant} />
+    </Suspense>
+  );
 }
 
-function ChatBody({ agent, variant }: { readonly agent: UseEveAgentReturn; readonly variant: "page" | "panel" }) {
-  const { viewer, sessionId, sessionLink, ask } = useAssistant();
+function LoadingConversation() {
+  return (
+    <div className="flex flex-1 items-center justify-center text-muted-foreground text-sm">
+      <Loader2Icon className="mr-2 size-4 animate-spin" /> Loading conversation…
+    </div>
+  );
+}
+
+function AssistantChatBody({ variant }: { readonly variant: "page" | "panel" }) {
+  const viewer = useViewer();
+  const { agent, sessionId, sessionLink, ask } = useAssistant();
+  if (!agent) return <LoadingConversation />;
+  return (
+    <EveChatBody
+      agent={agent}
+      ask={ask}
+      canApprove={viewer.canApprove}
+      intro={claimsIntro(viewer.canApprove)}
+      sessionId={sessionId}
+      sessionLink={sessionLink}
+      variant={variant}
+    />
+  );
+}
+
+/** One eve conversation: messages, approvals and questions, and the composer. */
+export function EveChatBody({
+  agent,
+  variant,
+  canApprove,
+  sessionId,
+  sessionLink,
+  ask,
+  intro,
+}: {
+  readonly agent: UseEveAgentReturn;
+  readonly variant: "page" | "panel";
+  /** Whether this viewer is shown approval buttons. The agent's own policy still decides. */
+  readonly canApprove: Viewer["canApprove"];
+  readonly sessionId: string | undefined;
+  readonly sessionLink: string | undefined;
+  readonly ask: (message: string | MessagePart[]) => Promise<void>;
+  readonly intro: ChatIntro;
+}) {
   const [cancellationError, setCancellationError] = useState<string>();
   const [hasInputText, setHasInputText] = useState(false);
   const compact = variant === "panel";
@@ -126,7 +184,7 @@ function ChatBody({ agent, variant }: { readonly agent: UseEveAgentReturn; reado
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       {showEmptyState ? (
-        <EmptyState compact={compact} canApprove={viewer.canApprove} onPick={(text) => void ask(text)} />
+        <EmptyState compact={compact} intro={intro} onPick={(text) => void ask(text)} />
       ) : (
         <Conversation
           className="min-h-0 flex-1"
@@ -142,7 +200,7 @@ function ChatBody({ agent, variant }: { readonly agent: UseEveAgentReturn; reado
             {agent.messages.map((message) =>
               showPendingThinking && isPendingAssistantShell && message.id === lastMessage.id ? null : (
                 <AgentMessage
-                  canApprove={viewer.canApprove}
+                  canApprove={canApprove}
                   canRespond={canRespond}
                   key={message.id}
                   message={message}
@@ -171,7 +229,7 @@ function ChatBody({ agent, variant }: { readonly agent: UseEveAgentReturn; reado
             className={compact ? "min-h-12" : undefined}
             disabled={isResuming}
             onChange={(event) => setHasInputText(event.currentTarget.value.trim().length > 0)}
-            placeholder="Ask about a policy or a claim…"
+            placeholder={intro.placeholder}
           />
           <ComposerAction
             canCancel={turnOpen}
@@ -185,26 +243,23 @@ function ChatBody({ agent, variant }: { readonly agent: UseEveAgentReturn; reado
   );
 }
 
-function EmptyState({
+export function EmptyState({
   compact,
-  canApprove,
+  intro,
   onPick,
 }: {
   readonly compact: boolean;
-  readonly canApprove: boolean;
+  readonly intro: ChatIntro;
   readonly onPick: (text: string) => void;
 }) {
   return (
     <div className={cn("flex flex-1 flex-col justify-end gap-4 overflow-y-auto", compact ? "p-4" : "mx-auto w-full max-w-3xl px-4 py-8 sm:px-6")}>
       <div className="flex flex-col gap-1">
-        <h2 className={cn("font-medium tracking-tight", compact ? "text-lg" : "text-3xl")}>How can I help?</h2>
-        <p className="text-muted-foreground text-sm">
-          Ask about open claims on a policy you work on, or ask to flag a claim for review.
-          {canApprove ? " As a supervisor, you can approve flags others request." : " Flags wait for a supervisor's approval."}
-        </p>
+        <h2 className={cn("font-medium tracking-tight", compact ? "text-lg" : "text-3xl")}>{intro.title}</h2>
+        <p className="text-muted-foreground text-sm">{intro.blurb}</p>
       </div>
       <div className="flex flex-col gap-2">
-        {suggestionsFor(canApprove).map((text) => (
+        {intro.suggestions.map((text) => (
           <button
             className="rounded-lg border bg-card px-3 py-2 text-left text-sm transition-colors hover:border-brand/40 hover:bg-brand-soft"
             key={text}
@@ -244,7 +299,7 @@ function ComposerAction({
   );
 }
 
-function ErrorMessage({ message }: { readonly message: string }) {
+export function ErrorMessage({ message }: { readonly message: string }) {
   return (
     <Message className="max-w-full" from="assistant">
       <MessageContent>

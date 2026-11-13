@@ -1,2 +1,2 @@
-/** The agent this Web Chat talks to. `undefined` selects the project's root agent. */
-export const WEB_CHAT_AGENT: string | undefined = undefined;
+/** The eve agent the Claims Assistant chat talks to: a member of the agent workspace under agents/. */
+export const WEB_CHAT_AGENT = "claims";

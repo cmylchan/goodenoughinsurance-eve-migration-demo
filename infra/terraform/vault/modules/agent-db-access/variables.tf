@@ -46,6 +46,12 @@ variable "writer_grants" {
   type        = list(string)
 }
 
+variable "notifier_grants" {
+  description = "SQL grants for the optional notifier role (the approval-text outbox). Empty means no such role."
+  type        = list(string)
+  default     = []
+}
+
 variable "db_default_ttl_seconds" {
   description = "Default lifetime of a generated database user."
   type        = number

@@ -1,9 +1,17 @@
-# Agent golden path on Vercel: the claims agent
+# Agent golden path on Vercel: from legacy agents to one framework
 
-A working template for running AI agents at **GoodEnough Insurance**, a composite regional insurer
-that already mandates Vault dynamic secrets on AWS. About 30 agents across its teams each rebuild the
-same plumbing. This repo is the platform team's answer: one agent built on Vercel's
-[eve](https://eve.dev) framework, plus the reviewed infrastructure a new team copies.
+How Vercel helps a company move its legacy AI agents onto one golden path, with AI doing most of the
+migration work.
+
+**GoodEnough Insurance** is a composite regional insurer that already mandates Vault dynamic secrets
+on AWS. About 30 agents across its teams each rebuilt the same plumbing in their own way. This repo is
+the platform team's answer, in two parts:
+
+1. **The golden path (live).** One agent built on Vercel's [eve](https://eve.dev) framework, plus the
+   reviewed infrastructure a new team copies.
+2. **The migration (in progress).** Legacy agents built the old way, and an AI migration advisor
+   that recommends the right Vercel path for each one and opens the pull request that moves it. See
+   [Migrating legacy agents](#migrating-legacy-agents-in-progress).
 
 Everything here is synthetic. There are no real people, policies or claims.
 
@@ -31,12 +39,56 @@ The first answer after a quiet period can take a few seconds while the database 
 
 ## The three rules
 
-1. **Every agent is durable, and every write needs a human approval.** `flag_claim` always pauses. The
-   wait survives restarts and redeploys, and only a supervisor other than the requester can approve.
+1. **Every agent that writes data or waits on a person is durable, and every write needs a human
+   approval.** `flag_claim` always pauses. The wait survives restarts and redeploys, and only a
+   supervisor other than the requester can approve. A read-only agent that finishes within one request
+   does not need durability.
 2. **No agent holds a standing secret.** Models are reached through Vercel AI Gateway, and data through
    the customer's Vault, both with the OIDC token Vercel signs for each deployment.
 3. **No agent ships without passing its evals.** Eighteen evals run against every deployment, and their
    result is a required Deployment Check: a build that fails cannot be promoted.
+
+## Migrating legacy agents (in progress)
+
+> Not built yet. The full design is in [docs/SPEC.md](docs/SPEC.md). This section describes where the
+> demo is going, not what the live site does today.
+
+Most of GoodEnough's agents already exist, built before the golden path. The demo shows a team
+moving one onto it.
+
+**Three legacy agents,** each written the way a team would without a platform. They sit in the same
+web chat, run only against test data, and each has a different flaw:
+
+| Legacy agent | What goes wrong | Recommended path |
+|---|---|---|
+| Claims Helper v1 | A claim note approves its own instruction and flags every claim. The kill switch is ignored. "I'm Sam" exposes another team's policy and its holder ID. | eve |
+| Notes Summariser | Static database password, and holder IDs in its summaries. Otherwise a sound one-request, read-only feature. | Stay on AI SDK `ToolLoopAgent`, hardened |
+| Reserve Desk | Pending approvals vanish on redeploy, and a retry against a flaky internal API applies a reserve change twice. | AI SDK `WorkflowAgent` |
+
+**The migration advisor** is an eve agent that walks a team through seven steps in the chat:
+1. Pick a legacy agent.
+2. Read its code.
+3. Score it against the same evals as the golden-path agent.
+4. Ask only what the code can't answer.
+5. Recommend a path, with evidence.
+6. Cut a draft PR after approval.
+7. Share the PR's Vercel preview with the scores before and after.
+
+It follows Vercel's guide
+[eve vs AI SDK agents vs WorkflowAgent](https://vercel.com/kb/guide/eve-vs-ai-sdk-agents-vs-workflowagent),
+so it doesn't push every agent onto eve. The point of the demo is that AI does the reading, scoring
+and rewriting, and people approve the verdict and the PR.
+
+**Every agent follows Vercel's documented structure for its framework:**
+- **eve agents** live in an agent workspace (`agents/<name>/agent/`).
+- **AI SDK agents** are defined once and served from thin routes.
+- **Shared platform code** is a package that every agent imports or mounts as an eve extension,
+  instead of copied files.
+
+The legacy agents break these conventions on purpose, and the advisor's PRs restore them.
+
+**Supervisor approval by phone:** Sam approves Ana's request by replying to a text on a simulated phone
+page. The same server-side rule decides: a supervisor, and never the requester.
 
 ## Where the boundary is
 
@@ -146,7 +198,9 @@ pattern; production would use AWS KMS auto-unseal.
    }
    ```
 
-2. **Copy `lib/` unchanged.** It is the part the platform team owns.
+2. **Copy `lib/` unchanged.** It is the part the platform team owns. (Planned: this becomes a platform
+   package that agents import or mount as an eve extension, so nothing is copied. See
+   [docs/SPEC.md](docs/SPEC.md).)
 3. **Write tools** in `agent/tools/`. Reads call `withDbCreds("reader", ...)`. Writes set
    `approval` and call `withDbCreds("writer", ...)` inside `execute`, which only runs after approval.
 4. **Write evals** in `evals/`, and keep `.github/workflows/evals.yml`. The gate comes with it.

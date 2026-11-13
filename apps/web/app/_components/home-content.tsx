@@ -1,17 +1,8 @@
 "use client";
 
-import {
-  ArrowRightIcon,
-  DatabaseIcon,
-  FlaskConicalIcon,
-  KeyRoundIcon,
-  MessageSquareIcon,
-  ShieldCheckIcon,
-  TimerResetIcon,
-} from "lucide-react";
-import Link from "next/link";
+import { ArrowRightIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { ASSISTANT_PATH, useAssistant } from "./assistant-provider";
+import { useAssistant, useViewer } from "./assistant-provider";
 
 interface Step {
   readonly title: string;
@@ -61,135 +52,69 @@ const SUPERVISOR_STEPS: readonly Step[] = [
   },
 ];
 
-const RULES = [
-  {
-    icon: TimerResetIcon,
-    title: "Durable, approved writes",
-    body: "Every write pauses for a supervisor other than the requester. eve runs each conversation on Vercel Workflow, so the pause survives restarts and redeploys.",
-  },
-  {
-    icon: KeyRoundIcon,
-    title: "No standing secrets",
-    body: "Models are reached through Vercel AI Gateway, and data through Vault, both with the OIDC token Vercel signs for each deployment. Database users last minutes.",
-  },
-  {
-    icon: FlaskConicalIcon,
-    title: "Evals gate every deploy",
-    body: "Eighteen evals run against each deployment. Their result is a required Deployment Check, so a failing build can't be promoted.",
-  },
-] as const;
-
-export function HomeContent() {
-  const { viewer, ask, agent } = useAssistant();
+/** The role-specific walkthrough. Streams in once the session is read; see <TryStepsSkeleton>. */
+export function TrySteps() {
+  const viewer = useViewer();
+  const { ask, agent } = useAssistant();
   const steps = viewer.canApprove ? SUPERVISOR_STEPS : ADJUSTER_STEPS;
   const ready = agent !== undefined && agent.status !== "resuming";
 
   return (
-    <main className="flex-1">
-      <section className="border-b bg-card">
-        <div className="mx-auto grid max-w-6xl gap-10 px-4 py-14 sm:px-6 md:grid-cols-[1.4fr_1fr] md:py-20">
-          <div className="flex flex-col gap-5">
-            <p className="font-medium text-brand text-xs uppercase tracking-[0.18em]">Claims operations portal</p>
-            <h1 className="font-semibold text-4xl tracking-tight md:text-5xl">
-              A claims assistant that asks before it writes.
-            </h1>
-            <p className="max-w-xl text-lg text-muted-foreground">
-              GoodEnough&apos;s adjusters and supervisors read claims and flag them for review by chatting with an
-              AI agent. It sees only the policies you&apos;re assigned, and every change waits for a human
-              approval.
-            </p>
-            <div className="flex flex-wrap gap-3">
-              <Button asChild className="bg-brand text-brand-foreground hover:bg-brand/90" size="lg">
-                <Link href={ASSISTANT_PATH}>
-                  <MessageSquareIcon /> Open Claims Assistant
-                </Link>
-              </Button>
-              <Button asChild size="lg" variant="outline">
-                <Link href="/data">
-                  <DatabaseIcon /> View your policies
-                </Link>
-              </Button>
-            </div>
-          </div>
-
-          <aside className="flex flex-col gap-4 rounded-2xl border bg-background p-6">
+    <>
+      <SectionHeading title={`Try it as ${viewer.displayName}`} />
+      <ol className="grid grid-cols-1 gap-6 md:grid-cols-2">
+        {steps.map((step, index) => (
+          <li
+            className="card-float flex min-w-0 flex-col gap-3 p-5 transition-shadow sm:p-6 duration-300 hover:shadow-[var(--shadow-card-hover)]"
+            key={step.title}
+          >
             <div className="flex items-center gap-3">
-              <span className="flex size-11 items-center justify-center rounded-full bg-brand font-semibold text-brand-foreground text-lg">
-                {viewer.displayName.slice(0, 1)}
+              <span className="flex size-8 items-center justify-center rounded-full bg-brand-soft font-bold text-brand text-sm">
+                {index + 1}
               </span>
-              <div>
-                <p className="font-medium">Signed in as {viewer.displayName}</p>
-                <p className="text-muted-foreground text-sm">{viewer.title}</p>
-              </div>
+              <h3 className="font-bold text-lg">{step.title}</h3>
             </div>
-            <ul className="flex flex-col gap-2 text-sm">
-              <li className="flex gap-2">
-                <ShieldCheckIcon className="mt-0.5 size-4 shrink-0 text-brand" />
-                {viewer.canApprove
-                  ? "Sees every policy, and can approve flags other people request."
-                  : "Sees only the policies assigned to you. Can request flags, but can't approve them."}
-              </li>
-              <li className="flex gap-2">
-                <ShieldCheckIcon className="mt-0.5 size-4 shrink-0 text-brand" />
-                Access is enforced on the server, from the policy_access table, not by this page.
-              </li>
-            </ul>
-            <p className="rounded-lg bg-muted px-3 py-2 text-muted-foreground text-xs">
-              To see both roles at once, sign in as {viewer.canApprove ? "ana" : "sam"} in a private window.
-            </p>
-          </aside>
-        </div>
-      </section>
-
-      <section className="mx-auto max-w-6xl px-4 py-12 sm:px-6">
-        <div className="mb-6 flex flex-col gap-1">
-          <h2 className="font-semibold text-2xl tracking-tight">Try it as {viewer.displayName}</h2>
-          <p className="text-muted-foreground text-sm">
-            Each step opens the assistant in the corner and asks for you. It&apos;s the same conversation as the
-            Claims Assistant page.
-          </p>
-        </div>
-        <ol className="grid gap-4 md:grid-cols-2">
-          {steps.map((step, index) => (
-            <li className="flex flex-col gap-3 rounded-xl border bg-card p-5" key={step.title}>
-              <div className="flex items-center gap-3">
-                <span className="flex size-7 items-center justify-center rounded-full bg-brand-soft font-medium text-brand text-sm">
-                  {index + 1}
-                </span>
-                <h3 className="font-medium">{step.title}</h3>
+            <p className="text-[15px] text-muted-foreground leading-relaxed">{step.detail}</p>
+            {step.prompt ? (
+              <div className="mt-auto flex items-center justify-between gap-3 rounded-xl bg-muted px-3 py-2.5">
+                <code className="min-w-0 truncate text-xs">{step.prompt}</code>
+                <Button disabled={!ready} onClick={() => void ask(step.prompt!)} size="xs" variant="outline">
+                  Try it <ArrowRightIcon />
+                </Button>
               </div>
-              <p className="text-muted-foreground text-sm">{step.detail}</p>
-              {step.prompt ? (
-                <div className="mt-auto flex items-center justify-between gap-3 rounded-lg bg-muted px-3 py-2">
-                  <code className="min-w-0 truncate text-xs">{step.prompt}</code>
-                  <Button disabled={!ready} onClick={() => void ask(step.prompt!)} size="xs" variant="outline">
-                    Try it <ArrowRightIcon />
-                  </Button>
-                </div>
-              ) : null}
-            </li>
-          ))}
-        </ol>
-      </section>
+            ) : null}
+          </li>
+        ))}
+      </ol>
+    </>
+  );
+}
 
-      <section className="border-t bg-card">
-        <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6">
-          <h2 className="mb-6 font-semibold text-2xl tracking-tight">How it&apos;s built</h2>
-          <div className="grid gap-4 md:grid-cols-3">
-            {RULES.map((rule) => (
-              <div className="flex flex-col gap-2 rounded-xl border bg-background p-5" key={rule.title}>
-                <rule.icon className="size-5 text-brand" />
-                <h3 className="font-medium">{rule.title}</h3>
-                <p className="text-muted-foreground text-sm">{rule.body}</p>
-              </div>
-            ))}
+export function TryStepsSkeleton() {
+  return (
+    <div aria-hidden="true">
+      <SectionHeading title={<span className="inline-block h-10 w-72 animate-pulse rounded-lg bg-border/60 align-middle" />} />
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+        {[0, 1, 2, 3].map((key) => (
+          <div className="card-float h-48 p-6" key={key}>
+            <div className="h-8 w-48 animate-pulse rounded-full bg-muted" />
+            <div className="mt-4 h-4 w-full animate-pulse rounded bg-muted" />
+            <div className="mt-2 h-4 w-2/3 animate-pulse rounded bg-muted" />
           </div>
-          <p className="mt-6 text-muted-foreground text-xs">
-            Vercel runs the agent, model routing, releases and traces. GoodEnough keeps Vault, Postgres,
-            identity and audit. All policies and claims here are synthetic.
-          </p>
-        </div>
-      </section>
-    </main>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function SectionHeading({ title }: { readonly title: React.ReactNode }) {
+  return (
+    <div className="mx-auto mb-10 flex max-w-2xl flex-col items-center gap-3 text-center">
+      <h2 className="font-bold text-3xl tracking-tight md:text-[44px] md:leading-[1.25]">{title}</h2>
+      <p className="text-muted-foreground">
+        Each step opens the assistant in the corner and asks for you. It&apos;s the same conversation as the Claims
+        Assistant page.
+      </p>
+    </div>
   );
 }

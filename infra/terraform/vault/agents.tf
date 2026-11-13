@@ -16,13 +16,19 @@ module "claims_agent" {
     test = vault_database_secret_backend_connection.claims["test"].name
   }
 
+  # claim_reserves is read by the Reserve Desk once it is migrated onto the golden path.
   reader_grants = [
-    "GRANT SELECT ON policies, claims, policy_access, agent_policy TO \"{{name}}\";",
+    "GRANT SELECT ON policies, claims, policy_access, agent_policy, claim_reserves TO \"{{name}}\";",
   ]
 
   writer_grants = [
     "GRANT INSERT ON claim_flags TO \"{{name}}\";",
     "GRANT SELECT ON agent_policy TO \"{{name}}\";",
+  ]
+
+  # The approval-text outbox (the simulated phone). This role cannot read a claim.
+  notifier_grants = [
+    "GRANT SELECT, INSERT, UPDATE ON phone_messages TO \"{{name}}\";",
   ]
 
   db_default_ttl_seconds = var.db_credential_ttl_seconds

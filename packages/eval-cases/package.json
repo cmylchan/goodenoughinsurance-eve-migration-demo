@@ -1,0 +1,19 @@
+{
+  "name": "@ge/eval-cases",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Shared eval cases and the scoreboard: one case definition, run against eve and AI SDK agents alike.",
+  "exports": {
+    ".": "./src/index.ts",
+    "./scoreboard": "./src/scoreboard.ts",
+    "./eve": "./src/eve-eval.ts"
+  },
+  "scripts": {
+    "test": "node --test src/*.test.ts"
+  },
+  "peerDependencies": {
+    "ai": "*",
+    "eve": "*"
+  }
+}

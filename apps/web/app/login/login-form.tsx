@@ -1,7 +1,6 @@
 "use client";
 
 import { useActionState } from "react";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { signIn } from "./actions";
 
@@ -10,21 +9,21 @@ export function LoginForm() {
   return (
     <form action={action} className="flex w-full flex-col gap-3">
       <label className="flex flex-col gap-1 text-sm">
-        <span className="text-muted-foreground">Username</span>
-        <Input autoCapitalize="none" autoComplete="username" autoFocus name="username" required />
+        <span className="font-bold text-foreground">Username</span>
+        <Input className="h-11" autoCapitalize="none" autoComplete="username" autoFocus name="username" required />
       </label>
       <label className="flex flex-col gap-1 text-sm">
-        <span className="text-muted-foreground">Password</span>
-        <Input autoComplete="current-password" name="password" required type="password" />
+        <span className="font-bold text-foreground">Password</span>
+        <Input className="h-11" autoComplete="current-password" name="password" required type="password" />
       </label>
       {error ? (
         <p className="text-destructive text-sm" role="alert">
           {error}
         </p>
       ) : null}
-      <Button className="mt-2" disabled={pending} type="submit">
+      <button className="cta mt-3 h-12 w-full text-sm disabled:opacity-60" disabled={pending} type="submit">
         {pending ? "Signing in…" : "Sign in"}
-      </Button>
+      </button>
     </form>
   );
 }

@@ -4,6 +4,9 @@
 # Not Terraform on purpose: the database is provisioned through the Vercel Marketplace, and after
 # Vault's rotate-root no provider could log in as the admin roles anyway.
 #
+# Optional: LEGACY_HELPER_DB_PASSWORD, LEGACY_SUMMARISER_DB_PASSWORD and LEGACY_RESERVE_DB_PASSWORD create
+# the legacy agents' static roles (claims_test only).
+#
 # Needs the owner's connection in the environment: PGHOST (direct, unpooled endpoint), PGUSER, PGPASSWORD,
 # PGDATABASE. Optional ADMIN_INITIAL_PASSWORD sets the vault_admin_* passwords (hand the same value to
 # Terraform once as TF_VAR_neon_admin_password; Vault rotates it straight away).
@@ -16,6 +19,20 @@ sql() { psql -v ON_ERROR_STOP=1 -q -At "$@"; }
 
 # Without ADMIN_INITIAL_PASSWORD the roles get a random password nobody keeps: they exist but cannot be used yet.
 admin_pw="${ADMIN_INITIAL_PASSWORD:-$(openssl rand -hex 24)}"
+
+# Static roles for the legacy agents (docs/SPEC.md Phase 2): deliberate rule 2 violations, kept so
+# the demo has something to migrate. They log in to claims_test only; seed.sql grants them
+# nothing in claims_prod. Created only when all three passwords are supplied.
+if [ -n "${LEGACY_HELPER_DB_PASSWORD:-}" ] && [ -n "${LEGACY_SUMMARISER_DB_PASSWORD:-}" ] && [ -n "${LEGACY_RESERVE_DB_PASSWORD:-}" ]; then
+  for pair in "legacy_helper:$LEGACY_HELPER_DB_PASSWORD" "legacy_summariser:$LEGACY_SUMMARISER_DB_PASSWORD" "legacy_reserve:$LEGACY_RESERVE_DB_PASSWORD"; do
+    role="${pair%%:*}"; pw="${pair#*:}"
+    if [ "$(sql -c "select 1 from pg_roles where rolname='${role}'")" = 1 ]; then verb=ALTER; else verb=CREATE; fi
+    psql -v ON_ERROR_STOP=1 -q -v pw="$pw" <<<"${verb} ROLE ${role} LOGIN PASSWORD :'pw';"
+    echo "${role}: static role ready (claims_test only)"
+  done
+else
+  echo "legacy roles: skipped (set LEGACY_HELPER_DB_PASSWORD, LEGACY_SUMMARISER_DB_PASSWORD and LEGACY_RESERVE_DB_PASSWORD to create them)"
+fi
 
 for env in prod test; do
   db="claims_${env}"; role="vault_admin_${env}"
