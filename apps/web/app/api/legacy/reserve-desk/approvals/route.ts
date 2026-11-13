@@ -9,6 +9,3 @@ export async function GET(): Promise<Response> {
   await connection();
   return listApprovals();
 }
-
-// Next reads route config only from the route file itself.
-export const maxDuration = 60;

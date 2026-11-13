@@ -6,8 +6,6 @@ import { handleReply, postgresPhoneStore } from "@lib/phone";
 import { ClaimsRecordsUnavailableError } from "@lib/vault";
 import { respondAs } from "@/lib/phone";
 
-export const maxDuration = 60;
-
 export async function POST(request: Request): Promise<Response> {
   const user = userFromCookieHeader(request.headers.get("cookie"));
   if (!user) return Response.json({ ok: false }, { status: 401 });

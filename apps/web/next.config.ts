@@ -11,6 +11,10 @@ const nextConfig: NextConfig = {
   partialPrefetching: true,
   // Memoizes components automatically. It skips any component that breaks the Rules of React.
   reactCompiler: true,
+  // Route handlers don't export maxDuration. Vercel bundles routes that share the same function
+  // config into one function, and each distinct value would add another; the Hobby plan allows
+  // 12 per deployment, and each eve agent service needs two. With fluid compute every route gets
+  // the default limit of 300 seconds.
   // Dev only: the iOS Simulator reaches the dev server at 127.0.0.1 (its "localhost" can hang),
   // and Next blocks dev resources requested from other origins.
   allowedDevOrigins: ["127.0.0.1"],
