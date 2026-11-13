@@ -165,10 +165,12 @@ export function postgresPhoneStore(actor: string): PhoneStore {
       }),
     list: (userId, limit) =>
       run(async (db) => {
+        // Sorted by recent.id, the number. A bare "ORDER BY id" would pick the text alias in the
+        // select list and sort "1000" before "999", leaving old texts stuck below new ones.
         const result = await db.query<{ id: string; direction: "out" | "in"; body: string; at: string }>(
           `SELECT id::text AS id, direction, body, created_at::text AS at FROM (
              SELECT id, direction, body, created_at FROM phone_messages WHERE to_user = $1 ORDER BY id DESC LIMIT $2
-           ) recent ORDER BY id`,
+           ) recent ORDER BY recent.id`,
           [userId, limit],
         );
         return result.rows;
