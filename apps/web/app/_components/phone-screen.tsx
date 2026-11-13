@@ -26,6 +26,10 @@ export function PhoneScreen({ name, phone, canApprove }: { readonly name: string
   const [load, setLoad] = useState<Load>({ state: "loading" });
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
+  // The reply being sent, shown at once so the phone never looks as if it ignored the tap, and
+  // what went wrong if it could not be delivered.
+  const [pending, setPending] = useState<string>();
+  const [sendError, setSendError] = useState<string>();
   const thread = useRef<HTMLDivElement>(null);
   const shown = useRef(0);
 
@@ -49,26 +53,48 @@ export function PhoneScreen({ name, phone, canApprove }: { readonly name: string
   }, [refresh]);
 
   const texts = load.state === "ready" ? load.texts : [];
+  // The server stores the reply before it asks the agent, so the poll can show it while the send
+  // is still waiting. Once it has, the placeholder would be a duplicate.
+  const pendingShown = pending !== undefined && !(texts.at(-1)?.direction === "in" && texts.at(-1)?.body === pending);
+  const bubbles = texts.length + (pendingShown ? 1 : 0) + (sendError ? 1 : 0);
   useEffect(() => {
-    if (texts.length !== shown.current) {
-      shown.current = texts.length;
+    if (bubbles !== shown.current) {
+      shown.current = bubbles;
       thread.current?.scrollTo({ top: thread.current.scrollHeight, behavior: "smooth" });
     }
-  }, [texts.length]);
+  }, [bubbles]);
 
   const send = async () => {
     const text = draft.trim();
     if (text.length === 0 || sending) return;
     setSending(true);
     setDraft("");
+    setPending(text);
+    setSendError(undefined);
     try {
-      await fetch("/api/phone/reply", {
+      // The server answers once the agent has ruled on the reply, which can take a few seconds.
+      const response = await fetch("/api/phone/reply", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ text }),
       });
+      if (!response.ok) {
+        // Nothing was recorded or it stopped half-way: say so and give the text back.
+        setDraft(text);
+        setSendError(
+          response.status === 503
+            ? "Not delivered: the claims records can't be reached right now. Try again in a moment."
+            : response.status === 401
+              ? "Not delivered: you've been signed out. Sign in again."
+              : `Not delivered (error ${response.status}). Try again.`,
+        );
+      }
+    } catch {
+      setDraft(text);
+      setSendError("Not delivered: no connection to the server. Try again.");
     } finally {
       setSending(false);
+      setPending(undefined);
       void refresh();
     }
   };
@@ -113,6 +139,19 @@ export function PhoneScreen({ name, phone, canApprove }: { readonly name: string
             <span className="px-1 text-[10px] text-muted-foreground">{timeOf(text.at)}</span>
           </div>
         ))}
+        {pendingShown ? (
+          <div className="flex max-w-[85%] flex-col items-end gap-0.5 self-end">
+            <p className="whitespace-pre-wrap break-words rounded-2xl rounded-br-md bg-brand px-3 py-2 text-brand-foreground text-sm leading-snug opacity-60">
+              {pending}
+            </p>
+            <span className="px-1 text-[10px] text-muted-foreground">Sending…</span>
+          </div>
+        ) : null}
+        {sendError ? (
+          <p className="self-center rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-1.5 text-center text-destructive text-xs" role="alert">
+            {sendError}
+          </p>
+        ) : null}
       </div>
 
       <form
