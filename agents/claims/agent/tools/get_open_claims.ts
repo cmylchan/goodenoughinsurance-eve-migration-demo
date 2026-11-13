@@ -1,6 +1,6 @@
 import { defineTool } from "eve/tools";
 import { z } from "zod";
-import { ClaimsRecordsUnavailableError, withDbCreds } from "../../lib/vault";
+import { ClaimsRecordsUnavailableError, withDbCreds } from "../../../../lib/vault";
 
 const NOTES_MAX = 160;
 // "Open" means anything not yet closed. The result says so, so the model can state the assumption.

@@ -9,5 +9,5 @@
     "skipLibCheck": true,
     "types": ["node"]
   },
-  "include": ["lib", "agent", "evals"]
+  "include": ["lib", "agents/**/*.ts"]
 }

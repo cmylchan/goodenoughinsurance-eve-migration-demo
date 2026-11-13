@@ -50,6 +50,6 @@
     "build:web": "next build apps/web",
     "typecheck": "tsc --noEmit && tsc --noEmit -p apps/web",
     "test": "node --test lib/*.test.ts",
-    "evals": "eve eval --strict"
+    "evals": "eve eval --agent claims --strict"
   }
 }

@@ -1,8 +1,8 @@
 import { defineTool } from "eve/tools";
 import { always } from "eve/tools/approval";
 import { z } from "zod";
-import { mayApprove } from "../../lib/identity";
-import { ClaimsRecordsUnavailableError, withDbCreds } from "../../lib/vault";
+import { mayApprove } from "../../../../lib/identity";
+import { ClaimsRecordsUnavailableError, withDbCreds } from "../../../../lib/vault";
 
 export default defineTool({
   description:

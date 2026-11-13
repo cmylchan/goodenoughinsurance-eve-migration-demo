@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { SESSION_COOKIE, verifySession } from "@lib/identity";
 
 // Pages need a signed-in user. Agent routes (/eve/...) are authenticated by the agent's own
-// channel policy in agent/channels/eve.ts, so an unauthenticated call there gets a 401, not a redirect.
+// channel policy in agents/<name>/agent/channels/eve.ts, so an unauthenticated call there gets a 401, not a redirect.
 const PUBLIC_PATHS = ["/login", "/eve", "/_eve_internal", "/api/health", "/api/login", "/api/eval-judge"];
 
 export function proxy(request: NextRequest) {

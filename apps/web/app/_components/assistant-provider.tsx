@@ -30,10 +30,16 @@ import type { Viewer } from "@/lib/session";
 
 export const ASSISTANT_PATH = "/assistant";
 
-/** `/s/<id>` is a conversation link, the one an adjuster sends a supervisor to approve a write. */
+/**
+ * `/s/<agent>/<id>` is a conversation link, the one an adjuster sends a supervisor to approve a
+ * write. The agent name is part of the link because each workspace agent keeps its own sessions.
+ * Links from before the workspace (`/s/<id>`) still open: they belong to the claims agent.
+ */
 export function sessionFromPath(pathname: string | null): string | undefined {
-  const match = pathname?.match(/^\/s\/([^/]+)\/?$/);
-  return match ? decodeURIComponent(match[1]) : undefined;
+  const match = pathname?.match(/^\/s\/(?:([^/]+)\/)?([^/]+)\/?$/);
+  if (!match) return undefined;
+  if (match[1] !== undefined && decodeURIComponent(match[1]) !== WEB_CHAT_AGENT) return undefined;
+  return decodeURIComponent(match[2]);
 }
 
 /** Pages where the full assistant is on screen, so the bubble would only duplicate it. */
@@ -173,7 +179,7 @@ export function AssistantProvider({ viewer, children }: { readonly viewer: Viewe
   const sessionLink =
     sessionId === undefined || typeof window === "undefined"
       ? undefined
-      : `${window.location.origin}/s/${encodeURIComponent(sessionId)}`;
+      : `${window.location.origin}/s/${WEB_CHAT_AGENT}/${encodeURIComponent(sessionId)}`;
 
   const value = useMemo<AssistantContextValue>(
     () => ({ viewer, agent, sessionId, sessionLink, bubbleOpen, setBubbleOpen, ask, newChat }),
