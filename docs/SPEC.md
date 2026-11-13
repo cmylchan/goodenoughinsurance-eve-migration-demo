@@ -596,6 +596,16 @@ Phase 4 is independent of 1–3 and can be built alongside them.
      - build a trivial WorkflowAgent with one hook-based approval
      - deploy a preview, approve, redeploy mid-wait, check that it resumes
      - check that the 18 eve evals still pass
+   - **Spike result, local half (2026-11-12): they coexist.** With `workflow` 5.5.0 and
+     `@ai-sdk/workflow` 2.0.103 installed and `next.config.ts` wrapped as
+     `withEve(withWorkflow(config), { eveRoot: "../.." })`:
+     - `next build` passes and registers both sets of routes.
+     - A `WorkflowAgent` tool that waits on `createHook()` inside the workflow body suspended, survived
+       a dev-server restart, and completed after `resumeHook()`.
+     - The eve evals passed against the same server.
+     - Two things had to change: Next now runs from `apps/web` (the Workflow plugin finds the app
+       from the working directory), and `proxy.ts` leaves `/.well-known/workflow/` out of its matcher.
+     - **Still open:** the same check on a Vercel preview (approve, redeploy mid-wait, resume).
    - **If the two conflict:** move Reserve Desk into its own Next.js app in this repo
      (`apps/reserve-desk`, a separate Vercel project). That matches its story, a team with its own
      app. The agent switcher then talks to it cross-origin, and its preview gets its own URL.
