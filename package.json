@@ -60,7 +60,7 @@
     "dev:web": "cd apps/web && next dev",
     "build:web": "node apps/web/scripts/link-eve-services.mjs && cd apps/web && next build",
     "typecheck": "npm run build:packages && tsc --noEmit && tsc --noEmit -p apps/web",
-    "test": "npm test --workspaces --if-present",
+    "test": "npm test --workspaces --if-present && node --test agents/migration/agent/lib/*.test.ts",
     "evals": "cd agents/claims && eve eval --strict",
     "build:packages": "npm run build --workspaces --if-present",
     "evals:compare": "node packages/eval-cases/src/cli.ts"
