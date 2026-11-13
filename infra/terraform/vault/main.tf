@@ -42,9 +42,11 @@ locals {
 resource "vault_database_secret_backend_connection" "claims" {
   for_each = local.databases
 
-  backend       = vault_mount.database.path
-  name          = each.value.database
-  allowed_roles = ["claims-reader-${each.key}", "claims-writer-${each.key}"]
+  backend = vault_mount.database.path
+  name    = each.value.database
+  # Every role the agent module defines for this database, the phone outbox's notifier included.
+  # A role missing here exists in Vault but cannot be issued ("is not an allowed role").
+  allowed_roles = ["claims-reader-${each.key}", "claims-writer-${each.key}", "claims-notifier-${each.key}"]
 
   postgresql {
     connection_url = "postgresql://{{username}}:{{password}}@${var.db_host}/${each.value.database}?sslmode=${var.db_sslmode}"

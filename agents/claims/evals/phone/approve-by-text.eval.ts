@@ -25,7 +25,8 @@ export default defineEval({
       };
 
     const asked = await t.send("Flag claim 77 for review: possible duplicate invoice.", ana);
-    t.awaitingInput();
+    // The first turn parks on the approval. Checked on that turn: the run as a whole goes on to finish.
+    asked.awaitingInput();
 
     // The text reaches the supervisor's phone, not the requester's.
     const request = (await texts(sam)).findLast((text) => text.direction === "out" && /Reply YES \d{6}/.test(text.body));
