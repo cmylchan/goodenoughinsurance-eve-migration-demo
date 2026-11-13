@@ -4,6 +4,7 @@
 #   2. reseed claims_prod and claims_test (clears claim_flags, claim_reserves, legacy_audit and the
 #      phone texts; restores the seeded reserves; sets writes_enabled = true)
 #   3. warm Neon up and check Vault can still mint a working credential
+#   4. close open migration/* pull requests and delete their branches
 #
 # Needs:
 #   VAULT_ADDR, VAULT_TOKEN   a terraform-admin token (ssh to the Vault host: sudo /opt/vault/vault-init.sh token)
@@ -30,6 +31,16 @@ PGUSER=$(jq -r .data.username <<<"$lease") PGPASSWORD=$(jq -r .data.password <<<
   psql -At -c "select 'reader ok: ' || count(*) || ' claims visible' from claims"
 vault_api -o /dev/null -X PUT "$VAULT_ADDR/v1/sys/leases/revoke-prefix/database/creds"
 sleep 2
+
+# Demo PRs from the migration advisor are never merged. Close them and delete their branches, so
+# production's legacy agents stay legacy and the next demo starts clean. Needs the gh CLI, signed in.
+if command -v gh >/dev/null 2>&1; then
+  echo "== closing open migration/* pull requests"
+  gh pr list --state open --json number,headRefName --jq '.[] | select(.headRefName | startswith("migration/")) | .number' |
+    while read -r number; do gh pr close "$number" --delete-branch --comment "Closed by infra/reset.sh: demo PRs are never merged."; done
+else
+  echo "== skipping migration/* pull requests (gh CLI not found)"
+fi
 
 echo "== ready"
 for db in claims_prod claims_test; do

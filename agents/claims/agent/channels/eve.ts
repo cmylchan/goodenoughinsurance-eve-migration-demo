@@ -1,33 +1,7 @@
 import { eveChannel } from "eve/channels/eve";
-import { type AuthFn, localDev, oidc, vercelOidc } from "eve/channels/auth";
 import { call } from "eve/events";
-import { userFromCookieHeader } from "@ge/golden-path/identity";
+import { goldenPathAuth } from "@ge/golden-path/eve-channel";
 import { postgresPhoneStore, sendApprovalTexts } from "@ge/golden-path/phone";
-
-// The web chat calls the agent on the same domain, so the browser sends the login cookie along.
-// The agent trusts only a session the identity stand-in signed; the user id it yields is what
-// tools see as the requester (ctx.session.auth.current) and the approver (ctx.approval.responder).
-const signedInUser: AuthFn<Request> = (request) => {
-  const user = userFromCookieHeader(request.headers.get("cookie"));
-  if (!user) return null;
-  return {
-    authenticator: "app",
-    principalId: user.id,
-    principalType: "user",
-    attributes: { title: user.title, canApprove: String(user.canApprove) },
-  };
-};
-
-// CI runs the evals from GitHub Actions. The runner proves who it is with GitHub's own OIDC
-// token (no stored credential), accepted only for workflows of this repository. It authenticates
-// as a service: it can drive the eval harness, but it is nobody in policy_access, so it sees no
-// claims unless it also signs in as a test user.
-const githubActionsEvalRunner = oidc({
-  issuer: "https://token.actions.githubusercontent.com",
-  // GitHub's default audience for this account, which Vercel Trusted Sources also expects.
-  audiences: ["https://github.com/cmylchan"],
-  claims: { repository: ["cmylchan/goodenoughinsurance-eve-migration-demo"] },
-});
 
 /** "flag claim 77 (possible duplicate invoice)": what the text says the requester is asking for. */
 function summaryOf(asked: { name?: string; input?: unknown } | undefined, prompt: string): string {
@@ -40,14 +14,8 @@ function summaryOf(asked: { name?: string; input?: unknown } | undefined, prompt
 }
 
 export default eveChannel({
-  auth: [
-    signedInUser,
-    githubActionsEvalRunner,
-    // Lets the eve TUI, `eve eval` and this project's own deployments reach the agent.
-    vercelOidc(),
-    // Open on localhost for `eve dev`; ignored in production.
-    localDev(),
-  ],
+  // Signed-in users, the CI eval runner and this project's own deployments (see @ge/golden-path).
+  auth: goldenPathAuth(),
   events: {
     // When a write starts waiting for approval, text the supervisors who may approve it (the
     // simulated phone, /phone in the web app). The text is a row in an outbox table, so it
