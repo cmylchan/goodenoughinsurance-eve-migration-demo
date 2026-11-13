@@ -24,6 +24,8 @@ export async function POST(request: Request): Promise<Response> {
 
   const { text } = await generateText({
     model: JUDGE_MODEL,
+    // Not an eve agent, so limits.sessionUsage doesn't apply; the verdict is one short JSON line.
+    maxOutputTokens: 300,
     system:
       "You grade an assistant's reply against a rubric. Reply with JSON only: " +
       '{"level": <index of the best-matching rubric level, starting at 0>, "reason": "<one sentence>"}. ' +

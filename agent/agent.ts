@@ -13,6 +13,17 @@ export default defineAgent({
       gateway: { models: ["openai/gpt-6-luna"] },
     },
   },
+  limits: {
+    // Checked before every model call. Once a session crosses any of these since its last
+    // approved continuation, eve pauses the turn and asks the user to Continue or Stop.
+    // Sessions nobody can answer (CI evals, delegated runs) fail with SESSION_USAGE_LIMIT_REACHED.
+    // Subagents without their own limit inherit this one; their usage also counts here.
+    // eve's default is 40M new input tokens, which is effectively uncapped for a claims chat.
+    sessionUsage: ({ window }) =>
+      window.inputTokens - window.cacheReadTokens >= 200_000 ||
+      window.outputTokens >= 20_000 ||
+      (window.costUsd ?? 0) >= 1.5,
+  },
   // pg is loaded at run time rather than bundled into the hosted output.
   build: { externalDependencies: ["pg"] },
 });
