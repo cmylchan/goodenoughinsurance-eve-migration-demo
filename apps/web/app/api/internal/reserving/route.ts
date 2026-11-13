@@ -10,8 +10,6 @@
 import { userFromCookieHeader } from "@lib/identity";
 import { FAULT_KEY, reservingDb } from "@/lib/reserving";
 
-export const dynamic = "force-dynamic";
-
 const FLAKY_RATE = 0.3;
 
 export async function POST(request: Request): Promise<Response> {

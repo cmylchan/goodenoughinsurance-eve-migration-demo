@@ -16,13 +16,14 @@ export function LogoMark({ className }: { readonly className?: string }) {
   );
 }
 
+/** The mark beside a serif wordmark, in the spirit of a friendly, hand-set logotype. */
 export function Logo({ className }: { readonly className?: string }) {
   return (
-    <span className={cn("flex items-center gap-2.5", className)}>
-      <LogoMark />
+    <span className={cn("flex items-center gap-2", className)}>
+      <LogoMark className="size-7" />
       <span className="flex flex-col leading-none">
-        <span className="font-semibold text-[15px] tracking-tight">GoodEnough</span>
-        <span className="text-[10px] text-muted-foreground uppercase tracking-[0.18em]">Home Insurance</span>
+        <span className="font-display text-[19px] text-foreground tracking-tight">GoodEnough</span>
+        <span className="mt-0.5 text-[9px] text-muted-foreground uppercase tracking-[0.22em]">Home Insurance</span>
       </span>
     </span>
   );

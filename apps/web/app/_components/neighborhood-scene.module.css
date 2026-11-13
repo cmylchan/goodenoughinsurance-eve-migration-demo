@@ -1,0 +1,231 @@
+/* Every motion here animates transform or opacity only, so it stays on the compositor. */
+
+.scene {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  animation: scene-in 900ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.line,
+.solid,
+.far,
+.dash,
+.cloud,
+.accent,
+.carBody,
+.glow,
+.smoke circle {
+  vector-effect: non-scaling-stroke;
+  stroke-width: 1.6;
+}
+
+.line {
+  fill: none;
+  stroke: var(--sketch-strong);
+}
+
+.solid {
+  fill: var(--background);
+  stroke: var(--sketch-strong);
+}
+
+.far {
+  fill: none;
+  stroke: var(--sketch);
+  opacity: 0.7;
+}
+
+.dash {
+  fill: none;
+  stroke: var(--sketch);
+  stroke-dasharray: 18 16;
+}
+
+.cloud {
+  fill: var(--background);
+  stroke: var(--sketch);
+}
+
+.accent {
+  fill: color-mix(in srgb, var(--brand) 14%, var(--background));
+  stroke: var(--brand);
+}
+
+.carBody {
+  fill: var(--background);
+  stroke: var(--brand);
+  stroke-width: 1.8;
+}
+
+.glow {
+  stroke: var(--sketch-strong);
+  fill: var(--brand);
+  fill-opacity: 0;
+  animation: window-glow 7s ease-in-out infinite;
+}
+
+/* Clouds drift right, starting part-way across so the sky isn't empty on load. */
+.drift {
+  animation: drift linear infinite;
+}
+.slow {
+  animation-duration: 70s;
+  animation-delay: -28s;
+}
+.slower {
+  animation-duration: 95s;
+  animation-delay: -70s;
+}
+.slowest {
+  animation-duration: 130s;
+  animation-delay: -20s;
+}
+
+.birds {
+  animation: birds 38s linear infinite;
+  animation-delay: -12s;
+}
+
+.balloon {
+  animation: bob 7s ease-in-out infinite alternate;
+}
+
+.tree {
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+  animation: sway 6s ease-in-out infinite alternate;
+}
+
+.smoke circle {
+  fill: var(--background);
+  stroke: var(--sketch);
+  transform-box: fill-box;
+  transform-origin: center;
+  opacity: 0;
+  animation: smoke 3.9s ease-out infinite;
+}
+
+.car {
+  animation: drive 16s linear infinite;
+  animation-delay: -5s;
+}
+
+.wheel {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: spin 0.7s linear infinite;
+}
+
+@keyframes scene-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+}
+
+@keyframes drift {
+  from {
+    transform: translateX(-260px);
+  }
+  to {
+    transform: translateX(1860px);
+  }
+}
+
+@keyframes birds {
+  0% {
+    transform: translate(-80px, 120px);
+  }
+  50% {
+    transform: translate(800px, 90px);
+  }
+  100% {
+    transform: translate(1700px, 130px);
+  }
+}
+
+@keyframes bob {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(-16px);
+  }
+}
+
+@keyframes sway {
+  from {
+    transform: rotate(-1.6deg);
+  }
+  to {
+    transform: rotate(1.6deg);
+  }
+}
+
+@keyframes smoke {
+  0% {
+    opacity: 0;
+    transform: translate(0, 0) scale(0.6);
+  }
+  20% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(10px, -46px) scale(1.8);
+  }
+}
+
+@keyframes window-glow {
+  0%,
+  45%,
+  100% {
+    fill-opacity: 0;
+  }
+  60%,
+  85% {
+    fill-opacity: 0.22;
+  }
+}
+
+@keyframes drive {
+  from {
+    transform: translateX(-180px);
+  }
+  to {
+    transform: translateX(1780px);
+  }
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .scene,
+  .scene * {
+    animation: none !important;
+  }
+  /* Park the moving pieces somewhere sensible. */
+  .car {
+    transform: translateX(1240px);
+  }
+  .birds {
+    transform: translate(860px, 100px);
+  }
+  .slow {
+    transform: translateX(240px);
+  }
+  .slower {
+    transform: translateX(1120px);
+  }
+  .slowest {
+    transform: translateX(640px);
+  }
+}

@@ -1,11 +1,12 @@
 // End-to-end health check: can this deployment still get from its own identity to a claims row?
 // It walks the same path as a tool step (OIDC token -> Vault login -> short-lived reader -> one
 // trivial query -> revoke) and reports only whether each side works. No detail, no identifiers.
+import { connection } from "next/server";
 import { ClaimsRecordsUnavailableError, withDbCreds } from "@lib/vault";
 
-export const dynamic = "force-dynamic";
-
 export async function GET(): Promise<Response> {
+  // Reads nothing from the request, so without this it would be prerendered once at build time.
+  await connection();
   try {
     await withDbCreds("reader", { requester: "health-check" }, async (db) => {
       await db.query("SELECT 1 FROM agent_policy LIMIT 1");

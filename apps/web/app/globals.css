@@ -1,5 +1,8 @@
 @import "tailwindcss";
 @import "tw-animate-css";
+
+/* Light only: `dark:` utilities in the shared components only apply under an explicit .dark class. */
+@custom-variant dark (&:where(.dark, .dark *));
 @source "../node_modules/streamdown/dist/*.js";
 
 @theme inline {
@@ -32,86 +35,135 @@
 
 /* Not inline: font utilities must read the variables so each host's font loader can override them. */
 @theme {
-  --font-sans: "Geist", "Geist Fallback", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Lato", "Lato Fallback", "Helvetica Neue", Arial, ui-sans-serif, system-ui, sans-serif;
+  --font-serif: "Merriweather", "Merriweather Fallback", Georgia, ui-serif, serif;
   --font-mono: "Geist Mono", "Geist Mono Fallback", ui-monospace, monospace;
+  --shadow-card: 0 10px 46px -10px rgb(0 0 0 / 0.16);
+  --shadow-card-hover: 0 18px 56px -12px rgb(0 0 0 / 0.22);
 }
 
+/*
+ * Light only, like the reference design: soft charcoal type on white, light-grey bands
+ * between sections, hairline borders, and one burgundy accent for actions and highlights.
+ */
 :root {
   color-scheme: light;
-  /* Soft neutral page with white elevated surfaces so cards/composer pop. */
-  --background: oklch(0.971 0 0);
-  --foreground: oklch(0.16 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.16 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.16 0 0);
-  --primary: oklch(0.19 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.94 0 0);
-  --secondary-foreground: oklch(0.19 0 0);
-  --muted: oklch(0.94 0 0);
-  --muted-foreground: oklch(0.6 0 0);
-  --accent: oklch(0.94 0 0);
-  --accent-foreground: oklch(0.19 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.916 0 0);
-  --input: oklch(0.916 0 0);
-  --ring: oklch(0.708 0 0);
-  --radius: 0.625rem;
-  /* GoodEnough brand: a deep harbour blue, with a soft tint for highlighted surfaces. */
-  --brand: oklch(0.42 0.11 252);
-  --brand-foreground: oklch(0.985 0 0);
-  --brand-soft: oklch(0.95 0.02 252);
+  --background: #ffffff;
+  --foreground: #4a4a4a;
+  --card: #ffffff;
+  --card-foreground: #4a4a4a;
+  --popover: #ffffff;
+  --popover-foreground: #4a4a4a;
+  --primary: #8a1538;
+  --primary-foreground: #ffffff;
+  --secondary: #f7f7f7;
+  --secondary-foreground: #4a4a4a;
+  --muted: #f7f7f7;
+  --muted-foreground: #757575;
+  --accent: #f6ecef;
+  --accent-foreground: #6e0f2c;
+  --destructive: #c62828;
+  --border: #dadada;
+  --input: #d0d0d0;
+  --ring: #b8546f;
+  --radius: 0.75rem;
+  /* GoodEnough brand: a burgundy red, with a deeper press state and a blush tint for surfaces. */
+  --brand: #8a1538;
+  --brand-strong: #6e0f2c;
+  --brand-foreground: #ffffff;
+  --brand-soft: #f6ecef;
+  /* Line-art illustration strokes. */
+  --sketch: #c4c4c4;
+  --sketch-strong: #a3a3a3;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    color-scheme: dark;
-    --background: oklch(0.145 0 0);
-    --foreground: oklch(0.985 0 0);
-    --card: oklch(0.205 0 0);
-    --card-foreground: oklch(0.985 0 0);
-    --popover: oklch(0.205 0 0);
-    --popover-foreground: oklch(0.985 0 0);
-    --primary: oklch(0.922 0 0);
-    --primary-foreground: oklch(0.205 0 0);
-    --secondary: oklch(0.269 0 0);
-    --secondary-foreground: oklch(0.985 0 0);
-    --muted: oklch(0.269 0 0);
-    --muted-foreground: oklch(0.708 0 0);
-    --accent: oklch(0.269 0 0);
-    --accent-foreground: oklch(0.985 0 0);
-    --destructive: oklch(0.704 0.191 22.216);
-    --border: oklch(1 0 0 / 10%);
-    --input: oklch(1 0 0 / 15%);
-    --ring: oklch(0.556 0 0);
-    --brand: oklch(0.72 0.12 248);
-    --brand-foreground: oklch(0.18 0.03 252);
-    --brand-soft: oklch(0.26 0.04 252);
+/*
+ * Base rules sit in the base layer so Tailwind utilities (layered) can override them. Unlayered,
+ * they beat every utility: inputs inherited the label's 14px instead of their own 16px, and iOS
+ * Safari zooms the page into any focused field under 16px.
+ */
+@layer base {
+  * {
+    border-color: var(--border);
+  }
+
+  html {
+    height: 100%;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    min-height: 100%;
+    margin: 0;
+    background: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-sans);
+  }
+
+  button,
+  input,
+  textarea {
+    font: inherit;
+  }
+
+  ::selection {
+    background: var(--brand-soft);
+    color: var(--brand-strong);
+  }
+
+  /* iOS: never shrink text after rotation, and don't flash grey on tap. */
+  html {
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
+  a,
+  button {
+    -webkit-tap-highlight-color: transparent;
   }
 }
 
-* {
-  border-color: var(--border);
+/* A sentence-case serif display face for the big headlines; everything else is Lato. */
+@utility font-display {
+  font-family: var(--font-serif);
+  font-weight: 400;
+  letter-spacing: -0.005em;
 }
 
-html {
-  height: 100%;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+/* The reference's call-to-action: a solid, uppercase, bold button with a tight radius. */
+@utility cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border-radius: 5px;
+  background: var(--brand);
+  color: var(--brand-foreground);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  transition:
+    background-color 150ms ease,
+    transform 150ms ease,
+    box-shadow 150ms ease;
+  &:hover {
+    background: var(--brand-strong);
+    box-shadow: 0 8px 24px -10px color-mix(in srgb, var(--brand) 70%, transparent);
+  }
+  &:active {
+    transform: translateY(1px);
+  }
+  &:focus-visible {
+    outline: 3px solid color-mix(in srgb, var(--brand) 35%, transparent);
+    outline-offset: 2px;
+  }
 }
 
-body {
-  min-height: 100%;
-  margin: 0;
-  background: var(--background);
-  font-family: var(--font-sans);
-}
-
-button,
-input,
-textarea {
-  font: inherit;
+/* A white card that floats on a soft, wide shadow, lifting a little on hover when it's a link. */
+@utility card-float {
+  border-radius: 20px;
+  background: var(--card);
+  box-shadow: var(--shadow-card);
 }
 
 /*
@@ -200,4 +252,54 @@ textarea {
 @utility shimmer-none {
   --shimmer-image: none;
   --shimmer-text-fill: currentColor;
+}
+
+/*
+ * The header's call to action fades and slides in over the first 160px of scroll, driven by a
+ * CSS scroll timeline: no scroll listener, no JavaScript. Browsers without scroll timelines show
+ * it all the time, and reduced motion skips the movement.
+ */
+@keyframes header-cta-in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.96);
+    visibility: hidden;
+  }
+  to {
+    opacity: 1;
+    transform: none;
+    visibility: visible;
+  }
+}
+
+@supports (animation-timeline: scroll()) {
+  .header-cta {
+    animation: header-cta-in linear both;
+    animation-timeline: scroll(root);
+    animation-range: 40px 160px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .header-cta {
+    animation: none;
+  }
+}
+
+/* Scroll-driven entrance for sections below the fold: they rise into place as they enter. */
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(28px);
+  }
+}
+
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .rise-in {
+      animation: rise-in linear both;
+      animation-timeline: view();
+      animation-range: entry 0% entry 55%;
+    }
+  }
 }

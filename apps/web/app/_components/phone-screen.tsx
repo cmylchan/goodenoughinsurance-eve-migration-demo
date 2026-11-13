@@ -70,7 +70,7 @@ export function PhoneScreen({ name, phone, canApprove }: { readonly name: string
   return (
     <section
       aria-label={`${name}'s simulated phone`}
-      className="flex h-[640px] max-h-[calc(100dvh-9rem)] w-full max-w-[340px] shrink-0 flex-col overflow-hidden rounded-[2.25rem] border-[10px] border-foreground bg-card shadow-xl"
+      className="flex h-[640px] max-h-[calc(100dvh-9rem)] max-md:max-h-[calc(100dvh-16rem)] w-full max-w-[340px] shrink-0 flex-col overflow-hidden rounded-[2.25rem] border-[10px] border-foreground bg-card shadow-[var(--shadow-card-hover)]"
     >
       <div className="flex items-center justify-between bg-foreground px-5 pt-1 pb-2 text-[11px] text-background">
         <span className="font-medium">{phone}</span>
@@ -116,7 +116,7 @@ export function PhoneScreen({ name, phone, canApprove }: { readonly name: string
         <input
           aria-label="Reply"
           autoComplete="off"
-          className="min-w-0 flex-1 rounded-full border bg-background px-3.5 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className="min-w-0 flex-1 rounded-full border bg-background px-3.5 py-2 text-base outline-none md:text-sm focus-visible:ring-2 focus-visible:ring-ring"
           maxLength={200}
           onChange={(event) => setDraft(event.currentTarget.value)}
           placeholder="YES 123456"

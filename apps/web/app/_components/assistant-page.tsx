@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { AssistantChat, type ChatIntro } from "./agent-chat";
 import { AgentSwitcher } from "./agent-switcher";
 import { AiSdkChat } from "./ai-sdk-chat";
-import { useAssistant } from "./assistant-provider";
+import { useAssistant, useViewer } from "./assistant-provider";
 import { chatAgent, DEFAULT_AGENT } from "./chat-agents";
 import { EveAgentChat } from "./eve-agent-chat";
 
@@ -34,7 +34,8 @@ export function AssistantPage({
   /** The viewer's assigned policies, which the fraud portal's client sends with each request. */
   readonly assignedPolicies?: string;
 }) {
-  const { viewer, sessionId, newChat } = useAssistant();
+  const viewer = useViewer();
+  const { sessionId, newChat } = useAssistant();
   const agent = chatAgent(agentId);
   const isClaims = agent.id === DEFAULT_AGENT;
   const [otherSession, setOtherSession] = useState<string>();
@@ -49,11 +50,11 @@ export function AssistantPage({
 
   return (
     // Fills the viewport under the header so the composer stays at the bottom.
-    <main className="flex h-[calc(100dvh-4rem)] flex-col max-md:h-[calc(100dvh-6.75rem)]">
-      <div className="border-b bg-card">
+    <main className="flex h-[calc(100dvh-70px)] flex-col max-md:h-[calc(100dvh-115px)]" data-fills-viewport="">
+      <div className="border-b bg-muted">
         <div className="mx-auto flex max-w-3xl flex-wrap items-center justify-between gap-x-3 gap-y-2 px-4 py-3 sm:px-6">
           <div className="min-w-0">
-            <h1 className="font-medium">{agent.label}</h1>
+            <h1 className="font-display text-lg">{agent.label}</h1>
             <p className="truncate text-muted-foreground text-xs">
               Signed in as {viewer.displayName} · {viewer.title}.{" "}
               {isClaims

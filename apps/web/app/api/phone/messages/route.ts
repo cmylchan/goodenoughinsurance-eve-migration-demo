@@ -3,8 +3,6 @@ import { userFromCookieHeader } from "@lib/identity";
 import { postgresPhoneStore } from "@lib/phone";
 import { ClaimsRecordsUnavailableError } from "@lib/vault";
 
-export const dynamic = "force-dynamic";
-
 export async function GET(request: Request): Promise<Response> {
   const user = userFromCookieHeader(request.headers.get("cookie"));
   if (!user) return Response.json({ ok: false }, { status: 401 });

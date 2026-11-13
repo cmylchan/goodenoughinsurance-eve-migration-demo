@@ -15,6 +15,8 @@ import { usePathname, useRouter } from "next/navigation";
 import {
   createContext,
   memo,
+  Suspense,
+  use,
   useCallback,
   useContext,
   useEffect,
@@ -24,11 +26,14 @@ import {
   useState,
   useSyncExternalStore,
   type ReactNode,
+  type RefObject,
 } from "react";
 import { WEB_CHAT_AGENT } from "@/app/eve-agent";
 import type { Viewer } from "@/lib/session";
 
-export const ASSISTANT_PATH = "/assistant";
+import { ASSISTANT_PATH } from "./paths";
+
+export { ASSISTANT_PATH };
 
 /**
  * `/s/<agent>/<id>` is a conversation link, the one an adjuster sends a supervisor to approve a
@@ -48,7 +53,12 @@ export function isAssistantPage(pathname: string | null): boolean {
 }
 
 interface AssistantContextValue {
-  readonly viewer: Viewer;
+  /**
+   * The signed-in viewer, read from the session cookie at request time. It is a promise so the
+   * layout never waits on it: the static shell prerenders, and whatever needs the viewer reads it
+   * with `useViewer()` inside its own <Suspense>.
+   */
+  readonly viewerPromise: Promise<Viewer>;
   /** Undefined until the browser has read which conversation this user was in. */
   readonly agent: UseEveAgentReturn | undefined;
   readonly sessionId: string | undefined;
@@ -67,6 +77,11 @@ export function useAssistant(): AssistantContextValue {
   const value = useContext(AssistantContext);
   if (!value) throw new Error("useAssistant must be used inside <AssistantProvider>");
   return value;
+}
+
+/** The signed-in viewer. Suspends until the request's session is read, so call it under <Suspense>. */
+export function useViewer(): Viewer {
+  return use(useAssistant().viewerPromise);
 }
 
 // The hook's state lives in a sibling component and is published here, so switching to a
@@ -88,6 +103,8 @@ function createAgentStore() {
   };
 }
 
+type AgentStore = ReturnType<typeof createAgentStore>;
+
 interface Slot {
   /** Bumped to remount the hook on another existing conversation. */
   readonly key: number;
@@ -96,22 +113,100 @@ interface Slot {
   readonly remembered: boolean;
 }
 
-export function AssistantProvider({ viewer, children }: { readonly viewer: Viewer; readonly children: ReactNode }) {
-  const pathname = usePathname();
-  const router = useRouter();
-  const storageKey = `ge:assistant-session:${viewer.id}`;
+export function AssistantProvider({
+  viewer: viewerPromise,
+  children,
+}: {
+  readonly viewer: Promise<Viewer>;
+  readonly children: ReactNode;
+}) {
+  // No usePathname() here: the provider wraps every page, and reading the URL outside <Suspense>
+  // would hold back the prerender of dynamic routes. Pieces that need the path read it themselves.
   const [store] = useState(createAgentStore);
   const agent = useSyncExternalStore(store.subscribe, store.get, () => undefined);
-  const [slot, setSlot] = useState<Slot>();
   const [sessionId, setSessionId] = useState<string>();
   const [bubbleOpen, setBubbleOpen] = useState(false);
-  const linkSession = sessionFromPath(pathname);
+  // Set by <ViewerSession> once it knows who is signed in.
+  const newChatRef = useRef<() => void>(undefined);
 
+  const ask = useCallback(
+    async (message: string | MessagePart[]) => {
+      const current = store.get();
+      if (!current || current.status === "resuming") return;
+      if (!isAssistantPage(window.location.pathname)) setBubbleOpen(true);
+      // A turn waiting on a person is still open: a new message steers it rather than queueing.
+      const options = activeTurn(current.view) !== undefined ? { turnPolicy: "steer" as const } : undefined;
+      await current.send(message, options);
+    },
+    [store],
+  );
+
+  const newChat = useCallback(() => newChatRef.current?.(), []);
+
+  const sessionLink =
+    sessionId === undefined || typeof window === "undefined"
+      ? undefined
+      : `${window.location.origin}/s/${WEB_CHAT_AGENT}/${encodeURIComponent(sessionId)}`;
+
+  const value = useMemo<AssistantContextValue>(
+    () => ({ viewerPromise, agent, sessionId, sessionLink, bubbleOpen, setBubbleOpen, ask, newChat }),
+    [viewerPromise, agent, sessionId, sessionLink, bubbleOpen, ask, newChat],
+  );
+
+  return (
+    <AssistantContext.Provider value={value}>
+      {/* Renders nothing; it opens the conversation once the viewer streams in. */}
+      <Suspense fallback={null}>
+        <ViewerSession newChatRef={newChatRef} onSessionId={setSessionId} store={store} viewerPromise={viewerPromise} />
+      </Suspense>
+      {children}
+    </AssistantContext.Provider>
+  );
+}
+
+function ViewerSession({
+  viewerPromise,
+  ...props
+}: {
+  readonly viewerPromise: Promise<Viewer>;
+  readonly store: AgentStore;
+  readonly onSessionId: (sessionId: string | undefined) => void;
+  readonly newChatRef: RefObject<(() => void) | undefined>;
+}) {
+  const viewer = use(viewerPromise);
+  // Keyed by user, so a different sign-in starts from that user's own conversation.
+  return <ConversationSlot key={viewer.id} viewerId={viewer.id} {...props} />;
+}
+
+/** Which conversation the signed-in user is in: a followed link, else the one they were last in. */
+function ConversationSlot({
+  viewerId,
+  store,
+  onSessionId,
+  newChatRef,
+}: {
+  readonly viewerId: string;
+  readonly store: AgentStore;
+  readonly onSessionId: (sessionId: string | undefined) => void;
+  readonly newChatRef: RefObject<(() => void) | undefined>;
+}) {
+  const pathname = usePathname();
+  const router = useRouter();
+  const storageKey = `ge:assistant-session:${viewerId}`;
+  const [slot, setSlot] = useState<Slot>();
   const sessionIdRef = useRef<string>(undefined);
-  sessionIdRef.current = sessionId;
+  const linkSession = sessionFromPath(pathname);
   // The last conversation link acted on, so only a newly followed link switches conversations.
   const handledLink = useRef<string>(undefined);
   const ready = slot !== undefined;
+
+  const setSessionId = useCallback(
+    (next: string | undefined) => {
+      sessionIdRef.current = next;
+      onSessionId(next);
+    },
+    [onSessionId],
+  );
 
   // First render in the browser: a conversation link wins, else whatever this user was last in.
   useEffect(() => {
@@ -133,14 +228,14 @@ export function AssistantProvider({ viewer, children }: { readonly viewer: Viewe
     setSlot((previous) => ({ key: (previous?.key ?? 0) + 1, sessionId: linkSession, remembered: false }));
     setSessionId(linkSession);
     writeStorage(storageKey, linkSession);
-  }, [linkSession, ready, storageKey]);
+  }, [linkSession, ready, setSessionId, storageKey]);
 
   const onSessionChange = useCallback(
     (next: string | undefined) => {
       setSessionId(next);
       writeStorage(storageKey, next);
     },
-    [storageKey],
+    [setSessionId, storageKey],
   );
 
   // A remembered conversation that has expired or ended starts over instead of showing an error.
@@ -148,59 +243,30 @@ export function AssistantProvider({ viewer, children }: { readonly viewer: Viewe
     writeStorage(storageKey, undefined);
     setSessionId(undefined);
     setSlot((previous) => ({ key: (previous?.key ?? 0) + 1, sessionId: undefined, remembered: false }));
-  }, [storageKey]);
+  }, [setSessionId, storageKey]);
 
-  const onAssistantPage = isAssistantPage(pathname);
-
-  const ask = useCallback(
-    async (message: string | MessagePart[]) => {
-      const current = store.get();
-      if (!current || current.status === "resuming") return;
-      if (!onAssistantPage) setBubbleOpen(true);
-      // A turn waiting on a person is still open: a new message steers it rather than queueing.
-      const options = activeTurn(current.view) !== undefined ? { turnPolicy: "steer" as const } : undefined;
-      await current.send(message, options);
-    },
-    [onAssistantPage, store],
-  );
-
-  const newChat = useCallback(() => {
-    store.get()?.newSession();
-    onSessionChange(undefined);
-    // Leaving a conversation link: the full page for a fresh chat lives at /assistant.
-    if (linkSession !== undefined) router.push(ASSISTANT_PATH);
-  }, [linkSession, onSessionChange, router, store]);
-
-  // The bubble closes itself on the full assistant page, which already shows the conversation.
   useEffect(() => {
-    if (onAssistantPage) setBubbleOpen(false);
-  }, [onAssistantPage]);
+    newChatRef.current = () => {
+      store.get()?.newSession();
+      onSessionChange(undefined);
+      // Leaving a conversation link: the full page for a fresh chat lives at /assistant.
+      if (linkSession !== undefined) router.push(ASSISTANT_PATH);
+    };
+  }, [linkSession, newChatRef, onSessionChange, router, store]);
 
-  const sessionLink =
-    sessionId === undefined || typeof window === "undefined"
-      ? undefined
-      : `${window.location.origin}/s/${WEB_CHAT_AGENT}/${encodeURIComponent(sessionId)}`;
+  // Signing out (or in as someone else) leaves no conversation behind.
+  useEffect(() => () => onSessionId(undefined), [onSessionId]);
 
-  const value = useMemo<AssistantContextValue>(
-    () => ({ viewer, agent, sessionId, sessionLink, bubbleOpen, setBubbleOpen, ask, newChat }),
-    [viewer, agent, sessionId, sessionLink, bubbleOpen, ask, newChat],
-  );
-
-  return (
-    <AssistantContext.Provider value={value}>
-      {slot ? (
-        <AgentHost
-          key={slot.key}
-          onSessionChange={onSessionChange}
-          onStale={onStale}
-          remembered={slot.remembered}
-          sessionId={slot.sessionId}
-          store={store}
-        />
-      ) : null}
-      {children}
-    </AssistantContext.Provider>
-  );
+  return slot ? (
+    <AgentHost
+      key={slot.key}
+      onSessionChange={onSessionChange}
+      onStale={onStale}
+      remembered={slot.remembered}
+      sessionId={slot.sessionId}
+      store={store}
+    />
+  ) : null;
 }
 
 /**
@@ -217,7 +283,7 @@ const AgentHost = memo(function AgentHost({
 }: {
   readonly sessionId: string | undefined;
   readonly remembered: boolean;
-  readonly store: ReturnType<typeof createAgentStore>;
+  readonly store: AgentStore;
   readonly onSessionChange: (sessionId: string | undefined) => void;
   readonly onStale: () => void;
 }) {

@@ -4,6 +4,7 @@ import { interactions } from "eve/events";
 import { Maximize2Icon, MessageSquareIcon, PlusIcon, XIcon } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { AssistantChat } from "./agent-chat";
@@ -14,7 +15,12 @@ import { LogoMark } from "./logo";
 export function AssistantBubble() {
   const pathname = usePathname();
   const { agent, bubbleOpen, setBubbleOpen, newChat, sessionId } = useAssistant();
-  if (isAssistantPage(pathname)) return null;
+  const onAssistantPage = isAssistantPage(pathname);
+  // The bubble closes itself on the full assistant page, which already shows the conversation.
+  useEffect(() => {
+    if (onAssistantPage) setBubbleOpen(false);
+  }, [onAssistantPage, setBubbleOpen]);
+  if (onAssistantPage) return null;
 
   const busy = agent?.status === "busy";
   const waitingOnApproval =
@@ -26,7 +32,7 @@ export function AssistantBubble() {
       <section
         aria-label="Claims Assistant"
         className={cn(
-          "fixed right-4 bottom-24 z-40 flex h-[min(640px,calc(100dvh-8rem))] w-[min(420px,calc(100vw-2rem))] flex-col overflow-hidden rounded-2xl border bg-background shadow-2xl transition-all duration-200 sm:right-6",
+          "fixed right-4 bottom-24 z-40 flex h-[min(640px,calc(100dvh-8rem))] w-[min(420px,calc(100vw-2rem))] flex-col overflow-hidden rounded-[20px] border bg-background shadow-[0_24px_80px_-20px_rgb(0_0_0/0.35)] transition-all duration-200 sm:right-6",
           bubbleOpen ? "visible translate-y-0 opacity-100" : "pointer-events-none invisible translate-y-3 opacity-0",
         )}
       >
@@ -59,7 +65,7 @@ export function AssistantBubble() {
       <button
         aria-expanded={bubbleOpen}
         aria-label={bubbleOpen ? "Close the Claims Assistant" : "Open the Claims Assistant"}
-        className="fixed right-4 bottom-4 z-40 flex size-14 items-center justify-center rounded-full bg-brand text-brand-foreground shadow-lg transition-transform hover:scale-105 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand/30 sm:right-6 sm:bottom-6"
+        className="fixed right-4 bottom-4 z-40 flex size-14 items-center justify-center rounded-full bg-brand text-brand-foreground shadow-[0_12px_32px_-8px_color-mix(in_srgb,var(--brand)_60%,transparent)] transition-[transform,background-color] hover:scale-105 hover:bg-brand-strong focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand/30 sm:right-6 sm:bottom-6"
         onClick={() => setBubbleOpen(!bubbleOpen)}
         type="button"
       >

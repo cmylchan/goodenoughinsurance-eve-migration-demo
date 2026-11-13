@@ -12,7 +12,7 @@ import {
 } from "eve/events";
 import type { UseEveAgentReturn } from "eve/react";
 import { AlertCircleIcon, BrainIcon, Loader2Icon, SquareIcon } from "lucide-react";
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import {
   Conversation,
   ConversationContent,
@@ -30,7 +30,7 @@ import {
 import { Trace, TraceIcon, TraceLine, TraceTitle } from "@/components/ui/trace";
 import { cn } from "@/lib/utils";
 import { AgentMessage } from "./agent-message";
-import { useAssistant } from "./assistant-provider";
+import { useAssistant, useViewer } from "./assistant-provider";
 import type { Viewer } from "@/lib/session";
 
 /** What an empty conversation shows: a heading, a line of help and starter prompts. */
@@ -72,14 +72,25 @@ export function suggestionsFor(canApprove: boolean): readonly string[] {
  * fits the floating bubble. Both read the same session from <AssistantProvider>.
  */
 export function AssistantChat({ variant }: { readonly variant: "page" | "panel" }) {
-  const { agent, viewer, sessionId, sessionLink, ask } = useAssistant();
-  if (!agent) {
-    return (
-      <div className="flex flex-1 items-center justify-center text-muted-foreground text-sm">
-        <Loader2Icon className="mr-2 size-4 animate-spin" /> Loading conversation…
-      </div>
-    );
-  }
+  return (
+    <Suspense fallback={<LoadingConversation />}>
+      <AssistantChatBody variant={variant} />
+    </Suspense>
+  );
+}
+
+function LoadingConversation() {
+  return (
+    <div className="flex flex-1 items-center justify-center text-muted-foreground text-sm">
+      <Loader2Icon className="mr-2 size-4 animate-spin" /> Loading conversation…
+    </div>
+  );
+}
+
+function AssistantChatBody({ variant }: { readonly variant: "page" | "panel" }) {
+  const viewer = useViewer();
+  const { agent, sessionId, sessionLink, ask } = useAssistant();
+  if (!agent) return <LoadingConversation />;
   return (
     <EveChatBody
       agent={agent}
