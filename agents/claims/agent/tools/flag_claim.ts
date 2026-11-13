@@ -1,8 +1,8 @@
 import { defineTool } from "eve/tools";
 import { always } from "eve/tools/approval";
 import { z } from "zod";
-import { mayApprove } from "../../../../lib/identity";
-import { ClaimsRecordsUnavailableError, withDbCreds } from "../../../../lib/vault";
+import { mayApprove, supervisorDecides } from "@ge/golden-path/approval";
+import { ClaimsRecordsUnavailableError, withDbCreds } from "@ge/golden-path/vault";
 
 export default defineTool({
   description:
@@ -21,16 +21,12 @@ export default defineTool({
     prompt: ({ input }) => `Flag claim ${input.claim_id} for review? Reason: ${input.reason}`,
     // Who may answer. Enforced by the agent, not by which buttons the browser shows:
     // only a supervisor can approve, and nobody can approve their own request.
-    response: ({ request, response }) => {
-      const requester = request.principal?.principalId;
-      const responder = response.principal.principalId;
-      if (response.decision === "deny" && (responder === requester || mayApprove(responder, requester))) {
-        return { status: "allowed" };
-      }
-      return mayApprove(responder, requester)
-        ? { status: "allowed" }
-        : { status: "rejected", reason: "Only a supervisor other than the requester can approve this flag." };
-    },
+    response: ({ request, response }) =>
+      supervisorDecides("this flag", {
+        requesterId: request.principal?.principalId,
+        responderId: response.principal.principalId,
+        decision: response.decision,
+      }),
   },
 
   // The model learns the outcome, not the audit identifiers.

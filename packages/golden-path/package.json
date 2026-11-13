@@ -1,0 +1,40 @@
+{
+  "name": "@ge/golden-path",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "GoodEnough Insurance platform package: the reviewed way an agent reaches data, identity and approvals.",
+  "eve": {
+    "extension": {
+      "source": "./extension",
+      "dist": "./dist/extension",
+      "externalDependencies": ["pg"]
+    }
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.mjs"
+    },
+    "./tools": {
+      "types": "./dist/tools/index.d.ts",
+      "default": "./dist/tools/index.mjs"
+    },
+    "./vault": "./src/vault.ts",
+    "./db": "./src/db.ts",
+    "./identity": "./src/identity.ts",
+    "./approval": "./src/approval.ts"
+  },
+  "scripts": {
+    "build": "eve extension build",
+    "test": "node --test src/*.test.ts"
+  },
+  "dependencies": {
+    "@opentelemetry/api": "^1.10.0",
+    "@vercel/oidc": "^4.0.8",
+    "pg": "^8.23.1"
+  },
+  "peerDependencies": {
+    "eve": "*"
+  }
+}

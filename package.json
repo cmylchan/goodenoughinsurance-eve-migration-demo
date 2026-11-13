@@ -1,11 +1,15 @@
 {
   "name": "claims-agent",
   "private": true,
+  "workspaces": [
+    "packages/*"
+  ],
   "type": "module",
   "engines": {
     "node": "24.x"
   },
   "dependencies": {
+    "@ge/golden-path": "*",
     "@opentelemetry/api": "^1.10.0",
     "@shadcn/react": "^0.3.1",
     "@shikijs/core": "^3.23.0",
@@ -48,8 +52,9 @@
   "scripts": {
     "dev:web": "next dev apps/web",
     "build:web": "next build apps/web",
-    "typecheck": "tsc --noEmit && tsc --noEmit -p apps/web",
-    "test": "node --test lib/*.test.ts",
-    "evals": "eve eval --agent claims --strict"
+    "typecheck": "npm run build:packages && tsc --noEmit && tsc --noEmit -p apps/web",
+    "test": "npm test --workspaces --if-present",
+    "evals": "eve eval --agent claims --strict",
+    "build:packages": "npm run build --workspaces --if-present"
   }
 }

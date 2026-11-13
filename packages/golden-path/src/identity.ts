@@ -11,6 +11,8 @@ export interface DirectoryUser {
   readonly title: string;
   /** Supervisors may approve writes. Nobody may approve their own request. */
   readonly canApprove: boolean;
+  /** Simulated mobile number for approval texts (fictional 555 range). See /phone in the web app. */
+  readonly phone: string;
   /** scrypt(salt, password). The demo passwords themselves are published in the README. */
   readonly passwordHash: string;
 }
@@ -22,6 +24,7 @@ export const DIRECTORY: Readonly<Record<UserId, DirectoryUser>> = {
     displayName: "Ana",
     title: "Claims adjuster",
     canApprove: false,
+    phone: "+1 555 0101",
     passwordHash: "2ca966ccc12f43c12b4259541e1b5e2f:c51dda43eff29936add8a65a2974d6f6ccac69eddfe03fdafbe6f6b9557c9f9e",
   },
   sam: {
@@ -29,6 +32,7 @@ export const DIRECTORY: Readonly<Record<UserId, DirectoryUser>> = {
     displayName: "Sam",
     title: "Claims supervisor",
     canApprove: true,
+    phone: "+1 555 0142",
     passwordHash: "84410ada2dbcc6d40e93d5e4ddd02a30:d208411e6f114e99f0a7ef2ec07f804d00173eb42628f112a940ad076158a66f",
   },
 };
@@ -47,12 +51,6 @@ export function checkPassword(id: string, password: string): DirectoryUser | und
   const [salt, hash] = user.passwordHash.split(":");
   const candidate = scryptSync(password, Buffer.from(salt, "hex"), 32);
   return timingSafeEqual(candidate, Buffer.from(hash, "hex")) ? user : undefined;
-}
-
-/** May `approverId` approve a request made by `requesterId`? Enforced server-side by the write tool. */
-export function mayApprove(approverId: string | undefined, requesterId: string | undefined): boolean {
-  const approver = findUser(approverId);
-  return approver !== undefined && approver.canApprove && approver.id !== requesterId;
 }
 
 // The mock IdP signs its session cookie with this key. It is part of the IdP stand-in,

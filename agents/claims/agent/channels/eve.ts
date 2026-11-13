@@ -1,6 +1,6 @@
 import { eveChannel } from "eve/channels/eve";
 import { type AuthFn, localDev, oidc, vercelOidc } from "eve/channels/auth";
-import { userFromCookieHeader } from "../../../../lib/identity";
+import { userFromCookieHeader } from "@ge/golden-path/identity";
 
 // The web chat calls the agent on the same domain, so the browser sends the login cookie along.
 // The agent trusts only a session the identity stand-in signed; the user id it yields is what
