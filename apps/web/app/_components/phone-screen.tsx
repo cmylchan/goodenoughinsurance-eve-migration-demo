@@ -31,7 +31,7 @@ export function PhoneScreen({ name, phone, canApprove }: { readonly name: string
   const [pending, setPending] = useState<string>();
   const [sendError, setSendError] = useState<string>();
   const thread = useRef<HTMLDivElement>(null);
-  const shown = useRef(0);
+  const shown = useRef("");
 
   const refresh = useCallback(async () => {
     try {
@@ -56,13 +56,15 @@ export function PhoneScreen({ name, phone, canApprove }: { readonly name: string
   // The server stores the reply before it asks the agent, so the poll can show it while the send
   // is still waiting. Once it has, the placeholder would be a duplicate.
   const pendingShown = pending !== undefined && !(texts.at(-1)?.direction === "in" && texts.at(-1)?.body === pending);
-  const bubbles = texts.length + (pendingShown ? 1 : 0) + (sendError ? 1 : 0);
+  // Scroll to the newest bubble whenever the last one changes. Counting bubbles is not enough:
+  // the phone keeps the latest 50 texts, so once it is full a new text leaves the count unchanged.
+  const newest = `${texts.at(-1)?.id ?? ""}:${pendingShown ? "pending" : ""}:${sendError ?? ""}`;
   useEffect(() => {
-    if (bubbles !== shown.current) {
-      shown.current = bubbles;
+    if (newest !== shown.current) {
+      shown.current = newest;
       thread.current?.scrollTo({ top: thread.current.scrollHeight, behavior: "smooth" });
     }
-  }, [bubbles]);
+  }, [newest]);
 
   const send = async () => {
     const text = draft.trim();
