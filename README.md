@@ -9,9 +9,9 @@ the platform team's answer, in two parts:
 
 1. **The golden path (live).** One agent built on Vercel's [eve](https://eve.dev) framework, plus the
    reviewed infrastructure a new team copies.
-2. **The migration (in progress).** Legacy agents built the old way, and an AI migration advisor
-   that recommends the right Vercel path for each one and opens the pull request that moves it. See
-   [Migrating legacy agents](#migrating-legacy-agents-in-progress).
+2. **The migration.** Three legacy agents built the old way, and an AI migration advisor that
+   recommends the right Vercel path for each one and opens the pull request that moves it. See
+   [Migrating legacy agents](#migrating-legacy-agents).
 
 Everything here is synthetic. There are no real people, policies or claims.
 
@@ -48,10 +48,11 @@ The first answer after a quiet period can take a few seconds while the database 
 3. **No agent ships without passing its evals.** Eighteen evals run against every deployment, and their
    result is a required Deployment Check: a build that fails cannot be promoted.
 
-## Migrating legacy agents (in progress)
+## Migrating legacy agents
 
-> Not built yet. The full design is in [docs/SPEC.md](docs/SPEC.md). This section describes where the
-> demo is going, not what the live site does today.
+> Built on the `feat/migration-demo-readme` branch; not yet deployed. It needs the setup in
+> [Setting up the migration demo](#setting-up-the-migration-demo) before it works on a deployment.
+> The full design is in [docs/SPEC.md](docs/SPEC.md).
 
 Most of GoodEnough's agents already exist, built before the golden path. The demo shows a team
 moving one onto it.
@@ -64,6 +65,9 @@ web chat, run only against test data, and each has a different flaw:
 | Claims Helper v1 | A claim note approves its own instruction and flags every claim. The kill switch is ignored. "I'm Sam" exposes another team's policy and its holder ID. | eve |
 | Notes Summariser | Static database password, and holder IDs in its summaries. Otherwise a sound one-request, read-only feature. | Stay on AI SDK `ToolLoopAgent`, hardened |
 | Reserve Desk | Pending approvals vanish on redeploy, and a retry against a flaky internal API applies a reserve change twice. | AI SDK `WorkflowAgent` |
+
+Pick any of them from the agent switcher on the Assistant page. An amber banner marks each one:
+"Legacy agent. Deliberately insecure. Test data only." They read `claims_test` on every deployment.
 
 **The migration advisor** is an eve agent that walks a team through seven steps in the chat:
 1. Pick a legacy agent.
@@ -87,8 +91,18 @@ and rewriting, and people approve the verdict and the PR.
 
 The legacy agents break these conventions on purpose, and the advisor's PRs restore them.
 
-**Supervisor approval by phone:** Sam approves Ana's request by replying to a text on a simulated phone
-page. The same server-side rule decides: a supervisor, and never the requester.
+**The same cases for every agent.** The 18 evals are shared case definitions
+([`packages/eval-cases`](packages/eval-cases)). They run against the eve agent through `eve eval`, and
+against any agent, eve or AI SDK, through one library. The advisor shows the scores; for developers:
+
+```bash
+npm run evals:compare -- --url https://<deployment-url>
+```
+
+**Supervisor approval by phone:** Sam approves Ana's request by replying to a text on a simulated
+phone ([`/phone`](https://claims-agent-eve.vercel.app/phone)). The text carries a one-time 6-digit
+code that expires after 30 minutes. The reply is handed to the agent as the phone's signed-in owner,
+so the same server-side rule decides: a supervisor, and never the requester. No real text is sent.
 
 ## Where the boundary is
 
@@ -125,31 +139,33 @@ the customer's private VPC, reached through Secure Compute peering.
 ## What is in the repo
 
 ```
-agent/
-  agent.ts               model and fallback, through AI Gateway
-  instructions.md        role, data-minimisation and refusal rules
-  channels/eve.ts        who may call the agent
-  tools/
-    get_open_claims.ts   read: scope check, minimal fields
-    flag_claim.ts        write: approval, kill switch, idempotent insert
-lib/
-  vault.ts               platform-owned helper: withDbCreds()
-  db.ts                  one verified-TLS client per tool step
-  identity.ts            login stand-in and the two test users
-apps/web/                Next.js web chat (hosts the agent)
-evals/                   18 evals in six groups
+agents/                    eve agent workspace: one deployment, each agent at /eve/<name>
+  claims/
+    agent/                 the golden-path agent: agent.ts, instructions.md, channels/, tools/, extensions/
+    evals/                 19 evals: 18 thin wrappers over the shared cases, and approval by text
+  migration/
+    agent/                 the migration advisor: tools/, subagents/ (three converters), skills/, lib/
+    evals/                 verdicts, defect coverage, safety, structure
+packages/
+  golden-path/             @ge/golden-path, owned by the platform team
+    src/                   vault.ts (withDbCreds), identity.ts, approval.ts, phone.ts, eve-channel.ts
+    extension/             eve extension: shared instruction fragment and audit hook
+  eval-cases/              @ge/eval-cases: shared cases, per-agent profiles, runScoreboard
+legacy/                    three other teams' agents, as they wrote them (not golden path)
+  claims-helper/  notes-summariser/  reserve-desk/
+apps/web/                  Next.js site: web chat with agent switcher, /phone, Data page, thin routes
 infra/
-  terraform/aws/         the Vault host
-  terraform/vault/       Vault configuration; modules/agent-db-access is the per-agent module
-  terraform/vercel/      the Vercel project
-  host/                  what runs on the Vault host, and its one-time bootstrap
-  seed.sql               synthetic data for both databases
-  reset.sh               back to a known state before a demo
-  watch-leases.sh        live view of database credentials appearing and disappearing
-  teardown.sh            remove everything
+  terraform/aws/           the Vault host
+  terraform/vault/         Vault configuration; modules/agent-db-access is the per-agent module
+  terraform/vercel/        the Vercel project
+  host/                    what runs on the Vault host, and its one-time bootstrap
+  seed.sql                 synthetic data and schema for both databases
+  reset.sh                 back to a known state before a demo
+  watch-leases.sh          live view of database credentials appearing and disappearing
+  teardown.sh              remove everything
 .github/workflows/
-  evals.yml              the release gate
-  health.yml             daily end-to-end check of production
+  evals.yml                the release gate
+  health.yml               daily end-to-end check of production
 ```
 
 ### The platform helper
@@ -160,7 +176,7 @@ Tool authors never touch Vault. They write:
 await withDbCreds("reader", { requester }, async (db) => db.query("SELECT ..."));
 ```
 
-[`lib/vault.ts`](lib/vault.ts) does the rest: it reads the OIDC token on every call, logs in once, takes
+[`packages/golden-path/src/vault.ts`](packages/golden-path/src/vault.ts) does the rest: it reads the OIDC token on every call, logs in once, takes
 one lease per step, opens one connection, and always revokes in `finally`. It fails closed: if Vault or
 Postgres cannot be reached, the tool says claims records are unavailable. There is no fallback
 credential.
@@ -198,27 +214,32 @@ pattern; production would use AWS KMS auto-unseal.
    }
    ```
 
-2. **Copy `lib/` unchanged.** It is the part the platform team owns. (Planned: this becomes a platform
-   package that agents import or mount as an eve extension, so nothing is copied. See
-   [docs/SPEC.md](docs/SPEC.md).)
-3. **Write tools** in `agent/tools/`. Reads call `withDbCreds("reader", ...)`. Writes set
-   `approval` and call `withDbCreds("writer", ...)` inside `execute`, which only runs after approval.
-4. **Write evals** in `evals/`, and keep `.github/workflows/evals.yml`. The gate comes with it.
+2. **Use the platform package; copy nothing.** Import `@ge/golden-path` (`withDbCreds`, identity, the
+   approval rule). An eve agent also mounts it as an extension with one file,
+   `agents/<name>/agent/extensions/golden-path.ts`, and gets the shared instruction fragment and
+   audit hook.
+3. **Write tools** in `agents/<name>/agent/tools/`, one per file. Reads call
+   `withDbCreds("reader", ...)`. Writes set `approval` and call `withDbCreds("writer", ...)` inside
+   `execute`, which only runs after approval.
+4. **Write evals** in `agents/<name>/evals/` from the shared cases, and keep
+   `.github/workflows/evals.yml`. The gate comes with it.
 
 ## Evals and the release gate
 
 ```bash
-npx eve eval --list
+cd agents/claims && npx eve eval --list
 ```
 
-Lists the 18 evals: reads never write (5), writes ask first (3), scope (3), injection (2),
+Lists the evals: approval by text (1), and the 18 shared cases: reads never write (5), writes ask first (3), scope (3), injection (2),
 minimisation (2), and rubric-graded quality (3).
 
 Every push gets a deployment. When it is built, Vercel notifies
 [`evals.yml`](.github/workflows/evals.yml), which runs the suite against that deployment's URL, signed
 in as the test users, and reports a commit status. The Vercel project requires that status before it
-will promote a production build. Previews run all 18 against `claims_test`; a production build runs the
-14 that neither write nor depend on test data.
+will promote a production build. Previews run all of them against `claims_test`; a production
+build runs the 14 that neither write nor depend on test data. On a deployment, eve addresses a
+workspace agent at `/eve/<name>`, so the workflow runs from `agents/claims` against
+`<deployment>/eve/claims`.
 
 To run them yourself against a deployment, start the workflow by hand:
 
@@ -237,9 +258,42 @@ agent secrets:
 
 - **The login stand-in's signing key** (`MOCK_IDP_SIGNING_KEY`). The login page stands in for the
   corporate identity provider, and this key signs its session cookie. It gives no access to data or
-  models. In production the real IdP replaces [`lib/identity.ts`](lib/identity.ts).
+  models. In production the real IdP replaces
+  [`packages/golden-path/src/identity.ts`](packages/golden-path/src/identity.ts).
 - **The test-user passwords above** are published because the data is synthetic and the reviewer needs
   them.
+
+- **The legacy agents' secrets** (`LEGACY_GATEWAY_KEY` and three `LEGACY_*_DATABASE_URL` values) are
+  standing secrets on purpose. They are what the golden path replaces, they reach `claims_test`
+  only, and the migration advisor reports each one as a finding.
+
+## Setting up the migration demo
+
+The code is in the repository; these steps connect it to the infrastructure. Do them in this order.
+
+1. **Database.** Run `infra/neon-bootstrap.sh` as the Neon owner with `LEGACY_HELPER_DB_PASSWORD`,
+   `LEGACY_SUMMARISER_DB_PASSWORD` and `LEGACY_RESERVE_DB_PASSWORD` set. It creates the new tables
+   (phone texts, reserves) and the three static legacy roles, and reseeds both databases.
+2. **Vault.** `terraform apply` in `infra/terraform/vault`. It adds the `notifier` role (the phone
+   outbox) and lets the reader role select `claim_reserves`. Do this after step 1: the new grants
+   name tables that step 1 creates.
+3. **Vercel environment variables**, production and preview: `LEGACY_GATEWAY_KEY` (never name it
+   `AI_GATEWAY_API_KEY`: the gateway provider prefers that variable over OIDC, for every agent),
+   and `LEGACY_HELPER_DATABASE_URL`, `LEGACY_SUMMARISER_DATABASE_URL`, `LEGACY_RESERVE_DATABASE_URL`,
+   each a `claims_test` connection string for its role.
+4. **GitHub App for the advisor.** `eve add channel/github --agent migration` (Vercel Connect), then
+   install the app on this repository. The advisor's tools expect the connector `github/ge-migrate`;
+   set `GITHUB_CONNECTOR` if yours is named differently.
+5. **Trusted source for preview scores.** In the Vercel project's Deployment Protection settings, add
+   this project's own Vercel OIDC issuer as a Trusted Source, so the advisor on production can score
+   a protected preview.
+
+Running locally: `npm run dev:web` now runs Next from `apps/web`. Link the Vercel project there once
+so the local OIDC token can be refreshed:
+
+```bash
+mkdir -p apps/web/.vercel && ln -s ../../../.vercel/project.json apps/web/.vercel/project.json
+```
 
 ## Removing it
 

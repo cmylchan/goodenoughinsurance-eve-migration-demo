@@ -26,7 +26,8 @@
     "./db": "./src/db.ts",
     "./identity": "./src/identity.ts",
     "./approval": "./src/approval.ts",
-    "./phone": "./src/phone.ts"
+    "./phone": "./src/phone.ts",
+    "./eve-channel": "./src/eve-channel.ts"
   },
   "scripts": {
     "build": "eve extension build",

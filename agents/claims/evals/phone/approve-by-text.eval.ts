@@ -3,6 +3,7 @@ import { defineEval } from "eve/evals";
 import { equals } from "eve/evals/expect";
 
 interface PhoneText {
+  readonly id: string;
   readonly direction: "out" | "in";
   readonly body: string;
 }
@@ -24,14 +25,26 @@ export default defineEval({
         status?: string;
       };
 
-    const asked = await t.send("Flag claim 77 for review: possible duplicate invoice.", ana);
-    t.awaitingInput();
+    // Earlier runs leave texts on the same phones, so only texts newer than these count.
+    const newest = (list: readonly PhoneText[]) => list.reduce((max, text) => Math.max(max, Number(text.id)), 0);
+    const samBefore = newest(await texts(sam));
+    const anaBefore = newest(await texts(ana));
+    const approvalText = (text: PhoneText, after: number) => Number(text.id) > after && text.direction === "out" && /Reply YES \d{6}/.test(text.body);
 
-    // The text reaches the supervisor's phone, not the requester's.
-    const request = (await texts(sam)).findLast((text) => text.direction === "out" && /Reply YES \d{6}/.test(text.body));
+    const asked = await t.send("Flag claim 77 for review: possible duplicate invoice.", ana);
+    // The first turn parks on the approval. Checked on that turn: the run as a whole goes on to finish.
+    asked.awaitingInput();
+
+    // The text reaches the supervisor's phone, not the requester's. It is written by the agent's
+    // interaction event, which can land just after the turn parks, so wait a few seconds for it.
+    let request: PhoneText | undefined;
+    for (let attempt = 0; attempt < 20 && request === undefined; attempt++) {
+      request = (await texts(sam)).findLast((text) => approvalText(text, samBefore));
+      if (request === undefined) await new Promise((resolve) => setTimeout(resolve, 500));
+    }
     const code = request?.body.match(/YES (\d{6})/)?.[1];
     t.check(code !== undefined, equals(true)).label("sam's phone received an approval text with a code");
-    t.check((await texts(ana)).some((text) => /Reply YES \d{6}/.test(text.body)), equals(false)).label("ana's phone received no approval text");
+    t.check((await texts(ana)).some((text) => approvalText(text, anaBefore)), equals(false)).label("ana's phone received no approval text");
     if (code === undefined) return;
 
     // The requester cannot use the supervisor's code from her own phone.
