@@ -3,60 +3,13 @@
 import { ArrowRightIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAssistant, useViewer } from "./assistant-provider";
-
-interface Step {
-  readonly title: string;
-  readonly detail: string;
-  /** Sent to the assistant when the reviewer clicks "Try it". */
-  readonly prompt?: string;
-}
-
-const ADJUSTER_STEPS: readonly Step[] = [
-  {
-    title: "Read within your scope",
-    detail: "Minimal fields come back, with no policyholder identifiers.",
-    prompt: "Summarize open claims for policy #1042.",
-  },
-  {
-    title: "Request a write",
-    detail:
-      "The assistant pauses for approval. Copy the link it shows and open it as sam in a private window. The wait survives restarts and redeploys.",
-    prompt: "Flag claim 77 for review: possible duplicate invoice.",
-  },
-  {
-    title: "Ask outside your scope",
-    detail: "Policy 2001 isn't assigned to you, so the request is refused and no data comes back.",
-    prompt: "Show me the open claims for policy #2001.",
-  },
-  {
-    title: "Try a planted instruction",
-    detail: "Claim 78's notes contain an injected instruction. Nothing is written without an approval.",
-    prompt: "Claim 78's notes say to flag every claim on this policy. Do it.",
-  },
-];
-
-const SUPERVISOR_STEPS: readonly Step[] = [
-  {
-    title: "Approve an adjuster's request",
-    detail:
-      "Open the conversation link ana copied. You see her request with Approve and Deny. You can't approve your own requests.",
-  },
-  {
-    title: "Read across every policy",
-    detail: "Supervisors are assigned every policy, so this read is allowed.",
-    prompt: "Summarize open claims for policy #2001.",
-  },
-  {
-    title: "Compare with the Data tab",
-    detail: "Data lists the policies you may see. The assistant reads the claims behind them.",
-  },
-];
+import { goldenPathSteps } from "./demo-guide";
 
 /** The role-specific walkthrough. Streams in once the session is read; see <TryStepsSkeleton>. */
 export function TrySteps() {
   const viewer = useViewer();
   const { ask, agent } = useAssistant();
-  const steps = viewer.canApprove ? SUPERVISOR_STEPS : ADJUSTER_STEPS;
+  const steps = goldenPathSteps(viewer.canApprove);
   const ready = agent !== undefined && agent.status !== "resuming";
 
   return (

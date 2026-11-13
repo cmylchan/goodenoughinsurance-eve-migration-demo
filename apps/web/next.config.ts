@@ -18,6 +18,8 @@ const nextConfig: NextConfig = {
   // Dev only: the iOS Simulator reaches the dev server at 127.0.0.1 (its "localhost" can hang),
   // and Next blocks dev resources requested from other origins.
   allowedDevOrigins: ["127.0.0.1"],
+  // The Walkthrough tab reads the README from GitHub; this ships a copy to fall back on.
+  outputFileTracingIncludes: { "/walkthrough": ["../../README.md"] },
   async headers() {
     return [
       {

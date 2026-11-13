@@ -10,6 +10,7 @@ import { useEveAgent } from "eve/react";
 import { Loader2Icon } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { EveChatBody, type ChatIntro } from "./agent-chat";
+import { useAssistant } from "./assistant-provider";
 
 const STALE_CODES = new Set(["session_expired", "session_stranded", "session_not_active", "forbidden", "unauthorized"]);
 
@@ -37,6 +38,7 @@ export function EveAgentChat({
   linkedSession,
   resetSignal,
   onSession,
+  variant = "page",
 }: {
   readonly agent: string;
   readonly viewerId: string;
@@ -46,6 +48,8 @@ export function EveAgentChat({
   /** Bump to start a new conversation. */
   readonly resetSignal: number;
   readonly onSession: (sessionId: string | undefined) => void;
+  /** `panel` fits the chat bubble. */
+  readonly variant?: "page" | "panel";
 }) {
   const storageKey = `ge:${agent}-session:${viewerId}`;
   // undefined until the browser has read which conversation this user was in.
@@ -93,6 +97,7 @@ export function EveAgentChat({
       }}
       onStale={startOver}
       sessionId={slot.sessionId}
+      variant={variant}
     />
   );
 }
@@ -103,7 +108,9 @@ function Session({
   intro,
   onSession,
   onStale,
+  variant,
 }: {
+  readonly variant: "page" | "panel";
   readonly agent: string;
   readonly sessionId: string | undefined;
   readonly intro: ChatIntro;
@@ -142,6 +149,15 @@ function Session({
     [agent],
   );
 
+  // A prompt sent here from the demo guide is asked as soon as the conversation can take it.
+  const { queuedPrompt, takePrompt } = useAssistant();
+  const canSend = agent.status !== "resuming";
+  useEffect(() => {
+    if (!canSend || queuedPrompt?.agentId !== agentName) return;
+    const text = takePrompt(agentName);
+    if (text !== undefined) void ask(text);
+  }, [agentName, ask, canSend, queuedPrompt, takePrompt]);
+
   const sessionLink =
     sessionId === undefined || typeof window === "undefined"
       ? undefined
@@ -156,7 +172,7 @@ function Session({
       intro={intro}
       sessionId={sessionId}
       sessionLink={sessionLink}
-      variant="page"
+      variant={variant}
     />
   );
 }

@@ -1,9 +1,9 @@
 "use client";
 
-import { MessageSquareIcon } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
+import { AssistantIcon } from "./assistant-icon";
 import { ASSISTANT_PATH, isAssistantPage } from "./assistant-provider";
 
 const NAV = [
@@ -11,6 +11,7 @@ const NAV = [
   { href: ASSISTANT_PATH, label: "Assistant", active: isAssistantPage },
   { href: "/data", label: "Data", active: (path: string) => path.startsWith("/data") },
   { href: "/phone", label: "Phone", active: (path: string) => path.startsWith("/phone") },
+  { href: "/walkthrough", label: "Walkthrough", active: (path: string) => path.startsWith("/walkthrough") },
 ] as const;
 
 /** The main links. Without `highlight` it never reads the URL, so it can be a prerendered fallback. */
@@ -52,7 +53,7 @@ export function HeaderCta() {
   if (isAssistantPage(pathname)) return null;
   return (
     <Link className="cta header-cta hidden h-9 whitespace-nowrap px-4 text-xs lg:inline-flex" href={ASSISTANT_PATH}>
-      <MessageSquareIcon className="size-3.5" /> Ask the assistant
+      <AssistantIcon className="size-4" /> Ask the assistant
     </Link>
   );
 }
