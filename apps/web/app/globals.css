@@ -304,7 +304,7 @@
   }
 }
 
-/* The chat launcher draws the eye with a slow halo, and its greeting pops out of it. */
+/* The chat launcher draws the eye with a slow halo. */
 @keyframes launcher-halo {
   0% {
     box-shadow:
@@ -319,22 +319,8 @@
   }
 }
 
-@keyframes greeting-in {
-  from {
-    opacity: 0;
-    transform: translateY(10px) scale(0.94);
-  }
-}
-
-.assistant-greeting {
-  transform-origin: bottom right;
-}
-
 @media (prefers-reduced-motion: no-preference) {
   .assistant-launcher[data-open="false"] {
     animation: launcher-halo 2.8s ease-out infinite;
-  }
-  .assistant-greeting {
-    animation: greeting-in 320ms cubic-bezier(0.22, 1, 0.36, 1) both;
   }
 }

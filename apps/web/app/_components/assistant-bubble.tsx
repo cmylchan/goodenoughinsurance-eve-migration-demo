@@ -17,8 +17,6 @@ import { pageContext } from "./demo-guide";
 import { EveAgentChat } from "./eve-agent-chat";
 import { GuidePanel } from "./guide-panel";
 
-const GREETED_KEY = "ge:assistant-greeted";
-
 /**
  * The AI assistant, floating in the corner of every page except the full assistant page. It
  * opens on the Claims Assistant, and its switcher reaches every other agent and the demo guide.
@@ -34,30 +32,17 @@ export function AssistantBubble() {
   const [reset, setReset] = useState(0);
   const [otherSession, setOtherSession] = useState<string>();
   const onSession = useCallback((id: string | undefined) => setOtherSession(id), []);
-  // The greeting introduces the assistant once per browser session, a moment after the page settles.
-  const [greeting, setGreeting] = useState(false);
+  // A label slides out beside the launcher a moment after the page settles, says what it is,
+  // and tucks itself away again. Hovering or focusing the launcher brings it back.
+  const [announcing, setAnnouncing] = useState(false);
   useEffect(() => {
-    try {
-      if (window.sessionStorage.getItem(GREETED_KEY) !== null) return;
-    } catch {
-      return;
-    }
-    // It steps aside by itself after a while; the launcher's own label keeps saying what it is.
-    const show = window.setTimeout(() => setGreeting(true), 1400);
-    const hide = window.setTimeout(() => setGreeting(false), 16000);
+    const show = window.setTimeout(() => setAnnouncing(true), 1400);
+    const hide = window.setTimeout(() => setAnnouncing(false), 9000);
     return () => {
       window.clearTimeout(show);
       window.clearTimeout(hide);
     };
   }, []);
-  const dismissGreeting = () => {
-    setGreeting(false);
-    try {
-      window.sessionStorage.setItem(GREETED_KEY, "1");
-    } catch {
-      // Without storage the greeting simply shows again on the next page load.
-    }
-  };
 
   // The bubble closes itself on the full assistant page, which already shows the conversation.
   useEffect(() => {
@@ -72,12 +57,6 @@ export function AssistantBubble() {
     claims !== undefined &&
     interactions(claims.view).some((input) => input.status === "open" && input.request.kind === "approval");
   const page = pageContext(pathname);
-
-  const open = (agentId?: string) => {
-    if (agentId !== undefined) setBubbleAgent(agentId);
-    setBubbleOpen(true);
-    dismissGreeting();
-  };
 
   const status = isClaims
     ? busy
@@ -198,61 +177,34 @@ export function AssistantBubble() {
         ) : null}
       </section>
 
-      {/* The greeting: says what the launcher is, and offers the two ways in. */}
-      {greeting && !bubbleOpen ? (
-        <aside
-          aria-label="Meet the AI assistant"
-          className="assistant-greeting fixed right-4 bottom-[5.5rem] z-40 w-[min(300px,calc(100vw-2rem))] rounded-2xl rounded-br-md border bg-background p-4 shadow-[0_18px_50px_-16px_rgb(0_0_0/0.35)] sm:right-6 sm:bottom-24"
-        >
-          <button
-            aria-label="Dismiss"
-            className="absolute top-2 right-2 flex size-6 items-center justify-center rounded-full text-muted-foreground hover:bg-muted hover:text-foreground"
-            onClick={dismissGreeting}
-            type="button"
-          >
-            <XIcon className="size-3.5" />
-          </button>
-          <p className="pr-6 font-bold text-sm">Hi {viewer.displayName}, I&apos;m GoodEnough&apos;s AI assistant.</p>
-          <p className="mt-1 text-muted-foreground text-sm leading-relaxed">
-            Chat with me about your policies and claims, or let me walk you through the demo step by step.
-          </p>
-          <div className="mt-3 flex flex-wrap gap-2">
-            <Button onClick={() => open(DEFAULT_AGENT)} size="sm">
-              <AssistantIcon className="size-4" /> Start chatting
-            </Button>
-            <Button onClick={() => open(GUIDE_AGENT)} size="sm" variant="outline">
-              <CompassIcon /> Guided tour
-            </Button>
-          </div>
-        </aside>
-      ) : null}
+      {/* The announcement: decorative, since the launcher carries its own accessible name. */}
+      <span
+        aria-hidden="true"
+        className={cn(
+          "assistant-label pointer-events-none fixed right-[5.25rem] bottom-[1.375rem] z-40 flex flex-col rounded-2xl rounded-br-md border bg-background px-3.5 py-2 leading-tight shadow-[0_12px_32px_-12px_rgb(0_0_0/0.35)] transition-[opacity,transform] duration-300 sm:right-[5.75rem] sm:bottom-[1.875rem]",
+          announcing && !bubbleOpen ? "translate-x-0 opacity-100" : "translate-x-2 opacity-0",
+        )}
+      >
+        <span className="font-bold text-sm">Chat with AI</span>
+        <span className="text-muted-foreground text-xs">Claims help &amp; demo tour</span>
+      </span>
 
       <button
         aria-expanded={bubbleOpen}
         aria-label={bubbleOpen ? "Close the AI assistant" : "Chat with the AI assistant"}
-        className={cn(
-          "assistant-launcher fixed right-4 bottom-4 z-40 flex h-14 items-center justify-center gap-2.5 rounded-full bg-brand text-brand-foreground shadow-[0_12px_32px_-8px_color-mix(in_srgb,var(--brand)_70%,transparent)] transition-[transform,background-color,padding] hover:scale-[1.04] hover:bg-brand-strong focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand/30 sm:right-6 sm:bottom-6",
-          bubbleOpen ? "w-14" : "w-14 sm:w-auto sm:pr-5 sm:pl-4",
-        )}
+        className="assistant-launcher fixed right-4 bottom-4 z-40 flex size-14 items-center justify-center rounded-full bg-brand text-brand-foreground shadow-[0_12px_32px_-8px_color-mix(in_srgb,var(--brand)_70%,transparent)] transition-[transform,background-color] hover:scale-105 hover:bg-brand-strong focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand/30 sm:right-6 sm:bottom-6"
         data-open={bubbleOpen}
-        onClick={() => (bubbleOpen ? setBubbleOpen(false) : open())}
+        onBlur={() => setAnnouncing(false)}
+        onClick={() => {
+          setAnnouncing(false);
+          setBubbleOpen(!bubbleOpen);
+        }}
+        onFocus={() => setAnnouncing(true)}
+        onMouseEnter={() => setAnnouncing(true)}
+        onMouseLeave={() => setAnnouncing(false)}
         type="button"
       >
-        {bubbleOpen ? (
-          <XIcon className="size-6" />
-        ) : (
-          <>
-            <AssistantIcon className="size-8" />
-            <span className="flex flex-col items-start leading-none max-sm:hidden">
-              <span className="font-bold text-[15px]">Chat with AI</span>
-              <span className="mt-1 text-[11px] opacity-80">Claims help &amp; demo tour</span>
-            </span>
-            {/* On a phone the launcher is a circle, so a badge says what it is. */}
-            <span className="absolute -top-1 -left-1 rounded-full border-2 border-background bg-foreground px-1.5 py-px font-bold text-[10px] text-background sm:hidden">
-              AI
-            </span>
-          </>
-        )}
+        {bubbleOpen ? <XIcon className="size-6" /> : <AssistantIcon className="size-8" />}
         {!bubbleOpen && (busy || waitingOnApproval) ? (
           <span className="absolute top-0 right-0 flex size-3.5">
             <span className="absolute inline-flex size-full animate-ping rounded-full bg-amber-400 opacity-75" />
