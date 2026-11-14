@@ -31,6 +31,8 @@ export function GuidePanel({ compact }: { readonly compact: boolean }) {
   const { agent: claims, askAgent } = useAssistant();
   const storageKey = `ge:guide-done:${viewer.id}`;
   const [done, setDone] = useState<readonly string[]>([]);
+  // What the last "wipe its memory" did, shown under that step.
+  const [forgot, setForgot] = useState<string>();
   useEffect(() => setDone(readDone(storageKey)), [storageKey]);
 
   const save = (next: readonly string[]) => {
@@ -62,6 +64,26 @@ export function GuidePanel({ compact }: { readonly compact: boolean }) {
     // On the full assistant page the chat is the page, so go to that agent there.
     if (isAssistantPage(pathname)) router.push(agentHref(step.agent));
     askAgent(step.agent, step.prompt);
+  };
+
+  // The same test hook the reserve evals use between a request and its approval. It clears the
+  // legacy apps' in-memory state; the golden-path agents keep none, so nothing else changes.
+  const forget = async (step: GuideStep) => {
+    setForgot("Wiping…");
+    try {
+      const response = await fetch("/api/test-hooks/restart", { method: "POST" });
+      const body = (await response.json()) as { ok?: boolean; cleared?: number };
+      if (!response.ok || !body.ok) throw new Error("refused");
+      const count = body.cleared ?? 0;
+      setForgot(
+        count === 0
+          ? "Nothing was waiting in memory. Ask Reserve Desk for a change first, then wipe again."
+          : `Wiped. ${count} pending approval${count === 1 ? " was" : "s were"} lost.`,
+      );
+      if (count > 0) mark(step.id);
+    } catch {
+      setForgot("Couldn't reach the app. Try again.");
+    }
   };
 
   const renderStep = (step: GuideStep, number: number | undefined) => {
@@ -104,14 +126,24 @@ export function GuidePanel({ compact }: { readonly compact: boolean }) {
                 {isDone ? "Ask again" : "Ask"} {shortName(step.agent!)} <ArrowRightIcon />
               </Button>
             ) : null}
+            {step.action ? (
+              <Button onClick={() => void forget(step)} size="xs" variant={step.id === next?.id ? "default" : "outline"}>
+                {step.action.label}
+              </Button>
+            ) : null}
             {step.link ? (
               <Button asChild size="xs" variant="outline">
-                <Link href={step.link.href} onClick={() => (runnable ? undefined : mark(step.id))}>
+                <Link href={step.link.href} onClick={() => (runnable || step.action ? undefined : mark(step.id))}>
                   {step.link.label}
                 </Link>
               </Button>
             ) : null}
           </div>
+          {step.action && forgot ? (
+            <p className="text-muted-foreground text-xs" role="status">
+              {forgot}
+            </p>
+          ) : null}
         </div>
       </li>
     );

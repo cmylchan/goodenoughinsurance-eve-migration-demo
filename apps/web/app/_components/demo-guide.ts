@@ -34,6 +34,8 @@ export interface GuideStep {
   readonly agent?: string;
   /** A page that is part of the step. */
   readonly link?: { readonly href: string; readonly label: string };
+  /** Something the guide does itself. `forget`: wipe what the legacy apps hold in memory, as a redeploy would. */
+  readonly action?: { readonly kind: "forget"; readonly label: string };
 }
 
 export interface GuideChapter {
@@ -149,6 +151,58 @@ export function guideChapters(canApprove: boolean): readonly GuideChapter[] {
           detail: "The change waits on the approvals screen, in the app's memory. A redeploy loses it, and a retry can apply it twice.",
           prompt: "Increase the reserve on claim 81 by 500: the repairer's quote came in higher.",
           agent: "reserve-desk",
+          link: { href: "/legacy/reserve-desk/approvals", label: "Approvals screen" },
+        },
+      ],
+    },
+    {
+      id: "durability",
+      title: "Durable across a redeploy",
+      blurb: "A write waiting for approval outlives the deployment it was asked on. Use the production address: a preview's own URL never changes deployment.",
+      steps: [
+        canApprove
+          ? {
+              id: "durable-request",
+              title: "Have a write left waiting",
+              detail: "As ana, in a private window, ask the Claims Assistant to flag claim 77 and leave it waiting for approval.",
+            }
+          : {
+              id: "durable-request",
+              title: "Leave a write waiting",
+              detail: "Ask for a flag and leave it waiting. Nothing is written, and no database user exists while it waits.",
+              prompt: "Flag claim 77 for review: possible duplicate invoice.",
+              agent: DEFAULT_AGENT,
+            },
+        {
+          id: "durable-redeploy",
+          title: "Redeploy",
+          detail:
+            "In Vercel, open Deployments, the production deployment, then Redeploy. Wait until the new deployment has passed its evals and is live: it has a new ID.",
+        },
+        canApprove
+          ? {
+              id: "durable-approve",
+              title: "Approve on the new deployment",
+              detail: "The request is still open. Approve it from ana's conversation link, or reply YES with the code on your phone.",
+              link: { href: "/phone", label: "Open your phone" },
+            }
+          : {
+              id: "durable-approve",
+              title: "Have it approved on the new deployment",
+              detail: "As sam, approve from the conversation link or by text. Your chat picks up where it stopped and writes the flag.",
+            },
+        {
+          id: "durable-evidence",
+          title: "See the write",
+          detail: "The flag is listed with who asked and who approved, written after the redeploy.",
+          link: { href: "/data", label: "Open Data" },
+        },
+        {
+          id: "durable-contrast",
+          title: "The contrast: Reserve Desk forgets",
+          detail:
+            "Run the Reserve Desk step above first, so a change is waiting on its approvals screen. Then wipe what the app holds in memory, which is what a redeploy does. Reload the approvals screen: the request is gone, and nobody was told.",
+          action: { kind: "forget", label: "Wipe its memory" },
           link: { href: "/legacy/reserve-desk/approvals", label: "Approvals screen" },
         },
       ],
