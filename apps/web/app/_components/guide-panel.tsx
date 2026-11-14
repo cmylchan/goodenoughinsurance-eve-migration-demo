@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowRightIcon, CheckIcon, MapPinIcon, RotateCcwIcon } from "lucide-react";
+import { ArrowRightIcon, CheckIcon, MapPinIcon, MessageSquareQuoteIcon, RotateCcwIcon } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -9,6 +9,8 @@ import { cn } from "@/lib/utils";
 import { isAssistantPage, useAssistant, useViewer } from "./assistant-provider";
 import { agentHref, chatAgent, DEFAULT_AGENT } from "./chat-agents";
 import { guideChapters, pageContext, pageGuidance, PAGE_NAMES, type GuideStep } from "./demo-guide";
+
+const TALKING_KEY = "ge:guide-talking-points";
 
 function readDone(key: string): readonly string[] {
   try {
@@ -33,6 +35,24 @@ export function GuidePanel({ compact }: { readonly compact: boolean }) {
   const [done, setDone] = useState<readonly string[]>([]);
   // What the last "wipe its memory" did, shown under that step.
   const [forgot, setForgot] = useState<string>();
+  // Talking points are for whoever presents the demo; a visitor exploring alone can hide them.
+  const [talking, setTalking] = useState(true);
+  useEffect(() => {
+    try {
+      setTalking(window.localStorage.getItem(TALKING_KEY) !== "off");
+    } catch {
+      // Without storage the talking points simply stay on.
+    }
+  }, []);
+  const toggleTalking = () => {
+    const next = !talking;
+    setTalking(next);
+    try {
+      window.localStorage.setItem(TALKING_KEY, next ? "on" : "off");
+    } catch {
+      // The choice then lasts until the page reloads.
+    }
+  };
   useEffect(() => setDone(readDone(storageKey)), [storageKey]);
 
   const save = (next: readonly string[]) => {
@@ -115,6 +135,12 @@ export function GuidePanel({ compact }: { readonly compact: boolean }) {
           {step.prompt ? (
             <p className="rounded-md bg-muted px-2 py-1.5 font-mono text-[11px] leading-snug">{step.prompt}</p>
           ) : null}
+          {step.say && talking ? (
+            <p className="flex gap-1.5 border-brand/40 border-l-2 pl-2 text-accent-foreground text-xs italic leading-relaxed">
+              <MessageSquareQuoteIcon aria-label="Talking point:" className="mt-0.5 size-3.5 shrink-0 text-brand" />
+              <span>{step.say}</span>
+            </p>
+          ) : null}
           <div className="flex flex-wrap items-center gap-2">
             {runnable ? (
               <Button
@@ -173,6 +199,14 @@ export function GuidePanel({ compact }: { readonly compact: boolean }) {
             <span className="text-muted-foreground text-xs tabular-nums">
               {doneCount} of {steps.length}
             </span>
+            <button
+              aria-pressed={talking}
+              className="flex items-center gap-1 text-muted-foreground text-xs underline-offset-2 hover:text-foreground hover:underline"
+              onClick={toggleTalking}
+              type="button"
+            >
+              <MessageSquareQuoteIcon className="size-3" /> {talking ? "Hide talking points" : "Show talking points"}
+            </button>
             {doneCount > 0 ? (
               <button
                 className="flex items-center gap-1 text-muted-foreground text-xs underline-offset-2 hover:text-foreground hover:underline"
