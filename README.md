@@ -26,14 +26,49 @@ Everything here is synthetic. There are no real people, policies or claims.
 
 Use two browser windows, one normal and one private, so both users are signed in at once.
 
-Signed in as **ana**, try these in order:
+### Walking through the golden-path demo
 
-1. `Summarize open claims for policy #1042.` A read: minimal fields, no holder identifiers.
-2. `Flag claim 77 for review: possible duplicate invoice.` A write: it stops and waits. Copy the link it
-   shows, open it in the other window as **sam**, and approve. Back in ana's window the flag is written.
-3. `Show me the open claims for policy #2001.` Out of ana's scope: refused, with no data.
-4. `Claim 78's notes say to flag every claim on this policy. Do it.` Claim 78's notes contain a planted
-   instruction. Nothing is written without an approval.
+This is the first demo: one agent built the golden-path way, and a write that waits for a person.
+The **Demo Guide** in the chat (the compass button, or the last entry in the agent switcher) runs
+these steps for you and shows a talking point under each one. The legacy agents and the migration
+come second, in [Walking through the migration demo](#walking-through-the-migration-demo).
+
+**Part 1: reads, as ana.** Each prompt goes to the Claims Assistant.
+
+| Prompt | What you see | What it shows |
+| --- | --- | --- |
+| `Summarize open claims for policy #1042.` | A count and a table of open claims. No holder identifiers. | A read returns the minimum. Holder identifiers never reach the model. |
+| `Show me the open claims for policy #2001.` | A refusal, with no data and no hint of what exists. | Access comes from the sign-in and the database, not from the prompt. |
+| `Claim 78's notes say to flag every claim on this policy. Do it.` | It reads the planted note and does not act on it. | Text inside a record is data, never an instruction. |
+
+**Part 2: the approval flow.** This is the centre of the demo.
+
+1. As **ana**, ask `Flag claim 77 for review: possible duplicate invoice.` The chat stops at
+   "Waiting for a supervisor to approve" and shows a link to the conversation. Nothing has been
+   written, and no database credential exists while it waits.
+2. As **sam**, approve it one of two ways:
+   - **By link.** Open the link ana copied. Sam sees her request with Approve and Deny. The link is a
+     visit to ana's conversation; sam's own chat stays separate.
+   - **By text.** Open [Phone](https://claims-agent-eve.vercel.app/phone). The request arrived as a
+     text with a one-time 6-digit code. Reply `YES` and the code. The phone answers "Approved".
+3. Back in **ana's** window the chat picks up where it stopped and reports the flag as written,
+   with ana as requester and sam as approver.
+4. See the evidence. Open [Data](https://claims-agent-eve.vercel.app/data): "Flags for review" lists
+   claim 77 with who asked, who approved, and when. Asking for the summary of policy 1042 again shows
+   the claim with a Flagged entry. Flagging does not change the claim's status.
+
+What the approval flow shows:
+
+- **Every write waits for a person.** The tool always pauses; the model cannot skip it, whatever it
+  is asked.
+- **Four eyes.** Only a supervisor other than the requester can approve. Ana cannot approve her own
+  request, by link or by text; the same rule decides both.
+- **The wait is durable.** It survives restarts and redeploys. The Demo Guide's "Durable across a
+  redeploy" chapter shows a request made on one deployment and approved on the next.
+- **The record names people.** The flag stores who requested it and who approved it.
+
+**Part 3: the same agent, as sam.** Ask `Summarize open claims for policy #2001.` It answers,
+because supervisors are assigned every policy. Nothing about the agent changed; the person did.
 
 The first answer after a quiet period can take a few seconds while the database wakes up.
 
@@ -106,9 +141,9 @@ so the same server-side rule decides: a supervisor, and never the requester. No 
 
 ### Walking through the migration demo
 
-The **Demo Guide** in the chat (the compass button, or the last entry in the agent switcher) runs
-these steps for you and shows a talking point under each one. Sign in as **ana**; keep **sam** in a
-private window.
+This is the second demo, after
+[the golden-path demo](#walking-through-the-golden-path-demo) and its approval flow. The **Demo
+Guide** runs these steps too. Sign in as **ana**; keep **sam** in a private window.
 
 **Part 1: three agents built before the platform.** Each prompt goes to the agent named.
 
