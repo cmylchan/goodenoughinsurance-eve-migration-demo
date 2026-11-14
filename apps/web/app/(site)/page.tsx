@@ -1,6 +1,7 @@
-import { DatabaseIcon, FlaskConicalIcon, KeyRoundIcon, MessageSquareIcon, ShieldCheckIcon, TimerResetIcon } from "lucide-react";
+import { DatabaseIcon, FlaskConicalIcon, KeyRoundIcon, ShieldCheckIcon, TimerResetIcon } from "lucide-react";
 import Link from "next/link";
 import { Suspense } from "react";
+import { AssistantIcon } from "@/app/_components/assistant-icon";
 import { TrySteps, TryStepsSkeleton } from "@/app/_components/home-content";
 import { NeighborhoodScene } from "@/app/_components/neighborhood-scene";
 import { ASSISTANT_PATH } from "@/app/_components/paths";
@@ -44,7 +45,7 @@ export default function HomePage() {
           </p>
           <div className="mt-2 flex flex-wrap justify-center gap-3">
             <Link className="cta h-[60px] px-9 text-base md:px-11 md:text-lg" href={ASSISTANT_PATH}>
-              <MessageSquareIcon className="size-5" /> Open Claims Assistant
+              <AssistantIcon className="size-6" /> Open Claims Assistant
             </Link>
             <Link
               className="inline-flex h-[60px] items-center gap-2 rounded-[5px] border-2 border-foreground/80 bg-background/80 px-7 font-bold text-sm uppercase tracking-[0.02em] backdrop-blur transition-colors hover:border-brand hover:text-brand md:text-base"

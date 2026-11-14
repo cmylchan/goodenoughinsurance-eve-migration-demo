@@ -1,38 +1,35 @@
 "use client";
 
 import { PlusIcon } from "lucide-react";
+import Link from "next/link";
 import { useCallback, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { AssistantChat, type ChatIntro } from "./agent-chat";
+import { AssistantChat, migrationIntro } from "./agent-chat";
 import { AgentSwitcher } from "./agent-switcher";
 import { AiSdkChat } from "./ai-sdk-chat";
 import { useAssistant, useViewer } from "./assistant-provider";
-import { chatAgent, DEFAULT_AGENT } from "./chat-agents";
+import { agentHref, chatAgent, DEFAULT_AGENT } from "./chat-agents";
 import { EveAgentChat } from "./eve-agent-chat";
-
-const MIGRATION_INTRO: ChatIntro = {
-  title: "Move a legacy agent onto the golden path",
-  blurb:
-    "I'll take you through it in seven steps: pick an agent, read its code, score it, ask what the code can't tell me, " +
-    "recommend a path, open a draft PR after you approve, and share the PR's preview with scores before and after.",
-  suggestions: ["Start: show me the legacy agents.", "Assess legacy/reserve-desk.", "Assess legacy/claims-helper."],
-  placeholder: "Answer, or ask about the assessment…",
-};
+import { GuidePanel } from "./guide-panel";
 
 /**
  * The full-page assistant. The agent switcher picks who it talks to: the Claims Assistant (the
- * same conversation as the bubble), the Migration Advisor, or one of the legacy agents.
+ * same conversation as the bubble), the Migration Advisor, one of the legacy agents, or the demo
+ * guide, whose steps send prompts to the others.
  */
 export function AssistantPage({
   agentId = DEFAULT_AGENT,
   linkedSession,
   assignedPolicies = "",
+  shared = false,
 }: {
   readonly agentId?: string;
   /** A session opened from a conversation link to an agent other than the Claims Assistant. */
   readonly linkedSession?: string;
   /** The viewer's assigned policies, which the fraud portal's client sends with each request. */
   readonly assignedPolicies?: string;
+  /** Opened from a conversation link (/s/...), so it may be someone else's conversation. */
+  readonly shared?: boolean;
 }) {
   const viewer = useViewer();
   const { sessionId, newChat } = useAssistant();
@@ -42,7 +39,7 @@ export function AssistantPage({
   const [reset, setReset] = useState(0);
   const onSession = useCallback((id: string | undefined) => setOtherSession(id), []);
 
-  const showNewChat = isClaims ? sessionId !== undefined : agent.kind === "eve" ? otherSession !== undefined : true;
+  const showNewChat = isClaims ? sessionId !== undefined : agent.kind === "eve" ? otherSession !== undefined : agent.kind === "ai-sdk";
   const startNewChat = () => {
     if (isClaims) newChat();
     else setReset((value) => value + 1);
@@ -74,18 +71,29 @@ export function AssistantPage({
           </div>
         </div>
       </div>
+      {shared ? (
+        <p className="border-b bg-brand-soft px-4 py-2 text-center text-accent-foreground text-xs sm:px-6" role="note">
+          You opened this conversation from a link, so everyone in it sees what is said here. Your own chat is separate:{" "}
+          <Link className="font-bold underline underline-offset-2" href={agentHref(agent.id)}>
+            open it
+          </Link>
+          .
+        </p>
+      ) : null}
       {isClaims ? (
         <AssistantChat variant="page" />
       ) : agent.kind === "eve" ? (
         <EveAgentChat
           agent={agent.id}
-          intro={MIGRATION_INTRO}
+          intro={migrationIntro("assistant", viewer.canApprove)}
           key={agent.id}
           linkedSession={linkedSession}
           onSession={onSession}
           resetSignal={reset}
           viewerId={viewer.id}
         />
+      ) : agent.kind === "guide" ? (
+        <GuidePanel compact={false} />
       ) : (
         <AiSdkChat
           agent={agent}

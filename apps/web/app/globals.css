@@ -303,3 +303,24 @@
     }
   }
 }
+
+/* The chat launcher draws the eye with a slow halo. */
+@keyframes launcher-halo {
+  0% {
+    box-shadow:
+      0 12px 32px -8px color-mix(in srgb, var(--brand) 70%, transparent),
+      0 0 0 0 color-mix(in srgb, var(--brand) 45%, transparent);
+  }
+  70%,
+  100% {
+    box-shadow:
+      0 12px 32px -8px color-mix(in srgb, var(--brand) 70%, transparent),
+      0 0 0 16px color-mix(in srgb, var(--brand) 0%, transparent);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .assistant-launcher[data-open="false"] {
+    animation: launcher-halo 2.8s ease-out infinite;
+  }
+}

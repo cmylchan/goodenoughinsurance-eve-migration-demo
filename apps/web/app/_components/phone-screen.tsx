@@ -15,13 +15,23 @@ type Load = { state: "loading" } | { state: "ready"; texts: readonly PhoneText[]
 
 const POLL_MS = 2000;
 
+/** "22:41" in the viewer's own time zone, from a Postgres timestamp such as "2026-11-13 22:41:07.5+00". */
+function timeOf(at: string): string {
+  const date = new Date(at.replace(" ", "T").replace(/([+-]\d{2})$/, "$1:00"));
+  return Number.isNaN(date.getTime()) ? "" : date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+}
+
 /** A phone-shaped frame with the texts sent to the signed-in user's simulated number. */
 export function PhoneScreen({ name, phone, canApprove }: { readonly name: string; readonly phone: string; readonly canApprove: boolean }) {
   const [load, setLoad] = useState<Load>({ state: "loading" });
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
+  // The reply being sent, shown at once so the phone never looks as if it ignored the tap, and
+  // what went wrong if it could not be delivered.
+  const [pending, setPending] = useState<string>();
+  const [sendError, setSendError] = useState<string>();
   const thread = useRef<HTMLDivElement>(null);
-  const shown = useRef(0);
+  const shown = useRef("");
 
   const refresh = useCallback(async () => {
     try {
@@ -43,26 +53,50 @@ export function PhoneScreen({ name, phone, canApprove }: { readonly name: string
   }, [refresh]);
 
   const texts = load.state === "ready" ? load.texts : [];
+  // The server stores the reply before it asks the agent, so the poll can show it while the send
+  // is still waiting. Once it has, the placeholder would be a duplicate.
+  const pendingShown = pending !== undefined && !(texts.at(-1)?.direction === "in" && texts.at(-1)?.body === pending);
+  // Scroll to the newest bubble whenever the last one changes. Counting bubbles is not enough:
+  // the phone keeps the latest 50 texts, so once it is full a new text leaves the count unchanged.
+  const newest = `${texts.at(-1)?.id ?? ""}:${pendingShown ? "pending" : ""}:${sendError ?? ""}`;
   useEffect(() => {
-    if (texts.length !== shown.current) {
-      shown.current = texts.length;
+    if (newest !== shown.current) {
+      shown.current = newest;
       thread.current?.scrollTo({ top: thread.current.scrollHeight, behavior: "smooth" });
     }
-  }, [texts.length]);
+  }, [newest]);
 
   const send = async () => {
     const text = draft.trim();
     if (text.length === 0 || sending) return;
     setSending(true);
     setDraft("");
+    setPending(text);
+    setSendError(undefined);
     try {
-      await fetch("/api/phone/reply", {
+      // The server answers once the agent has ruled on the reply, which can take a few seconds.
+      const response = await fetch("/api/phone/reply", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ text }),
       });
+      if (!response.ok) {
+        // Nothing was recorded or it stopped half-way: say so and give the text back.
+        setDraft(text);
+        setSendError(
+          response.status === 503
+            ? "Not delivered: the claims records can't be reached right now. Try again in a moment."
+            : response.status === 401
+              ? "Not delivered: you've been signed out. Sign in again."
+              : `Not delivered (error ${response.status}). Try again.`,
+        );
+      }
+    } catch {
+      setDraft(text);
+      setSendError("Not delivered: no connection to the server. Try again.");
     } finally {
       setSending(false);
+      setPending(undefined);
       void refresh();
     }
   };
@@ -94,16 +128,32 @@ export function PhoneScreen({ name, phone, canApprove }: { readonly name: string
           </p>
         ) : null}
         {texts.map((text) => (
-          <p
-            className={cn(
-              "max-w-[85%] whitespace-pre-wrap break-words rounded-2xl px-3 py-2 text-sm leading-snug",
-              text.direction === "in" ? "self-end rounded-br-md bg-brand text-brand-foreground" : "self-start rounded-bl-md bg-muted",
-            )}
-            key={text.id}
-          >
-            {text.body}
-          </p>
+          <div className={cn("flex max-w-[85%] flex-col gap-0.5", text.direction === "in" ? "items-end self-end" : "items-start self-start")} key={text.id}>
+            <p
+              className={cn(
+                "whitespace-pre-wrap break-words rounded-2xl px-3 py-2 text-sm leading-snug",
+                text.direction === "in" ? "rounded-br-md bg-brand text-brand-foreground" : "rounded-bl-md bg-muted",
+              )}
+            >
+              {text.body}
+            </p>
+            {/* Requests for the same claim read alike; the time tells a new one from an old one. */}
+            <span className="px-1 text-[10px] text-muted-foreground">{timeOf(text.at)}</span>
+          </div>
         ))}
+        {pendingShown ? (
+          <div className="flex max-w-[85%] flex-col items-end gap-0.5 self-end">
+            <p className="whitespace-pre-wrap break-words rounded-2xl rounded-br-md bg-brand px-3 py-2 text-brand-foreground text-sm leading-snug opacity-60">
+              {pending}
+            </p>
+            <span className="px-1 text-[10px] text-muted-foreground">Sending…</span>
+          </div>
+        ) : null}
+        {sendError ? (
+          <p className="self-center rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-1.5 text-center text-destructive text-xs" role="alert">
+            {sendError}
+          </p>
+        ) : null}
       </div>
 
       <form

@@ -22,6 +22,6 @@ export default function SessionPage({ params }: { readonly params: Params }) {
 async function LinkedConversation({ params }: { readonly params: Params }) {
   const { slug } = await params;
   const agent = slug.length > 1 ? chatAgent(decodeURIComponent(slug[0])) : chatAgent(DEFAULT_AGENT);
-  if (agent.id === DEFAULT_AGENT || agent.kind !== "eve") return <AssistantPage />;
-  return <AssistantPage agentId={agent.id} linkedSession={decodeURIComponent(slug[1])} />;
+  if (agent.id === DEFAULT_AGENT || agent.kind !== "eve") return <AssistantPage shared />;
+  return <AssistantPage agentId={agent.id} linkedSession={decodeURIComponent(slug[1])} shared />;
 }
