@@ -15,6 +15,9 @@ the platform team's answer, in two parts:
 
 Everything here is synthetic. There are no real people, policies or claims.
 
+**Diagrams for the demo** (before, after, components and value stream for each use case) are in
+[docs/diagrams](docs/diagrams/README.md).
+
 ## Try it
 
 **https://claims-agent-eve.vercel.app**
