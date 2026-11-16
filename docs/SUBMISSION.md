@@ -121,8 +121,8 @@ sandbox (legacy code is read there and never run), and the Marketplace (Neon Pos
 
 - **Live:** https://claims-agent-eve.vercel.app
 - **Repository:** https://github.com/cmylchan/goodenoughinsurance-eve-migration-demo
-  (four pull requests were squash-merged; their original commits are kept under `history/pr-*`
-  tags, listed in the README's [Commit history](../README.md#commit-history))
+  (four pull requests were squash-merged; their original commits are on each pull request's
+  Commits tab, linked from the README's [Commit history](../README.md#commit-history))
 
 The sign-in page lists the two test users. The Demo Guide in the chat (the compass button) runs
 both demos step by step:
