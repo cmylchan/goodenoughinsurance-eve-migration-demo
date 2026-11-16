@@ -7,6 +7,52 @@ itself.
 
 Newest entries first. Each entry says what the person did, what it exposed, and what changed.
 
+## 16 November 2026 — the walkthrough as something to present
+
+The agent rewrote the top half of the README, which is also the site's Walkthrough tab.
+
+### Where a person intervened
+
+| # | What the person did | What it exposed | What changed |
+| --- | --- | --- | --- |
+| 1 | Asked for a section on the pain before either demo, and offered three guesses at what the pain was, to be checked. | The write-up went straight to the answer. Nothing said what problem a platform team has before it. | "Identifying the pain": seven pains, each tied to a legacy agent, with a before and an after diagram. |
+| 2 | Asked for the guesses to be validated, not accepted. | Two were borne out by the code. The third (security approval per team) is an inference: the repo shows the cause and the fix, but models no review queue. | The section says GoodEnough is a composite and words that pain as what the code shows. |
+| 3 | Renamed "Try it" to "Demo 1: Durable Golden-path Agent with eve". | The heading did not say what the demo proves. | Renamed. The agent also renamed the migration section "Demo 2" and moved the redeploy steps into Demo 1, where the title now promises them. |
+| 4 | Pointed at the page header and said to keep only the link to the README. | The branch name and a line about refresh timing were the builder's detail, not the reader's. | Removed. |
+| 5 | Asked for a review of the walkthrough for brevity and clarity. | The agent had been adding sections for three days and merging none. The legacy agents were described in two tables, the advisor's steps in a list and a table. | Duplicates merged; the approval flow cut to four steps. |
+
+### Found by the agent while checking its own work
+
+Looking at the rendered page, not just the Markdown, turned up three faults that a typecheck could
+not: relative links in the README were shown as "[blocked]", wide tables cut off their last column,
+and diagrams rendered as thumbnails in off-brand colours. All three were fixed. The final layout of
+the second diagram was changed after the last look and was not viewed again.
+
+## 14 November 2026 — making the demos presentable
+
+### Where a person intervened
+
+| # | What the person did | What it exposed | What changed |
+| --- | --- | --- | --- |
+| 1 | Asked how to demonstrate that the agent is durable across deployments. | The headline claim had no demonstration. The README asserted it and no eval redeploys mid-wait. | A "Durable across a redeploy" chapter in the Demo Guide, with a button that wipes the Reserve Desk's memory for the contrast. Still not run end to end. |
+| 2 | Asked for a full walkthrough and talking points for the migration demo. | The Demo Guide listed prompts but not what to say or what each step proves. | Talking points under every step; the migration chapter follows the advisor's seven steps. |
+| 3 | Said which setup steps were already done, when asked. | The agent could not tell from the repository which one-time setup had been carried out. | The README keeps only the two outstanding items. |
+| 4 | Asked where the original demo had gone. | It had not been removed, but it had been left as four one-line prompts beside a full walkthrough of the newer demo, so it read as dropped. | The approval flow got the same treatment as the migration demo. |
+| 5 | Asked for the troubleshooting guide to stay out of the repository, then out of the branch and its history. | The agent had committed an operator's runbook, with host names and recovery commands, to a public repository by default. | Ignored, untracked, and removed from the branch's history. |
+
+### What this adds to the split
+
+- **The person supplied the audience.** Every request in these two entries is about someone who
+  was not in the room: a viewer who needs the problem stated first, a presenter who needs a line to
+  say, a reader who does not care which branch a page was built from. The agent optimised for
+  completeness and had to be told who it was for.
+- **The person supplied facts the repository does not hold.** Which setup steps were done, where
+  the database lives, what belongs in public.
+- **The agent's additions accumulated.** Left alone it added and never consolidated. The brevity
+  review was a person's request, not something the agent proposed.
+- **Claims were checked on request.** The three pains were offered as guesses and one did not fully
+  survive. That check happened because the person asked for it.
+
 ## 13 November 2026 — look and feel, and a live walkthrough of the preview
 
 The agent built a set of look-and-feel changes (Walkthrough tab, chat launcher, agent switcher,
