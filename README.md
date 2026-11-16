@@ -221,6 +221,21 @@ the agent. The project's only environment variables are two addresses (`VAULT_AD
 **Network note.** Vault and Postgres have public TLS endpoints in this demo; in production they sit in
 the customer's private VPC, reached through Secure Compute peering.
 
+## Commit history
+
+Four pull requests were squash-merged, so on `main` each shows as one commit. Their original commits
+are kept under tags, one per pull request, and on each pull request's Commits tab:
+
+| Pull request | Tag | Original commits |
+| --- | --- | --- |
+| [#2 Portal frontend](https://github.com/cmylchan/goodenoughinsurance-eve-migration-demo/pull/2) | [`history/pr-2`](https://github.com/cmylchan/goodenoughinsurance-eve-migration-demo/commits/history/pr-2) | 2 |
+| [#3 Migration advisor](https://github.com/cmylchan/goodenoughinsurance-eve-migration-demo/pull/3) | [`history/pr-3`](https://github.com/cmylchan/goodenoughinsurance-eve-migration-demo/commits/history/pr-3) | 3 |
+| [#5 Data as tables](https://github.com/cmylchan/goodenoughinsurance-eve-migration-demo/pull/5) | [`history/pr-5`](https://github.com/cmylchan/goodenoughinsurance-eve-migration-demo/commits/history/pr-5) | 4 |
+| [#6 Walkthrough, Demo Guide, fixes](https://github.com/cmylchan/goodenoughinsurance-eve-migration-demo/pull/6) | [`history/pr-6`](https://github.com/cmylchan/goodenoughinsurance-eve-migration-demo/commits/history/pr-6) | 25 |
+
+They are tags rather than branches so they do not start preview deployments. To read one locally:
+`git fetch origin tag history/pr-6 && git log history/pr-6`.
+
 ## What is in the repo
 
 ```
