@@ -37,12 +37,15 @@ export default function HomePage() {
         <div className="relative z-10 mx-auto flex max-w-3xl flex-col items-center gap-6 px-4 pt-14 pb-[230px] text-center sm:px-6 md:pt-20 md:pb-[330px]">
           <p className="font-bold text-brand text-xs uppercase tracking-[0.2em]">GoodEnough Insurance, built on Vercel</p>
           <h1 className="font-display text-[34px] leading-[1.3] md:text-[55px]">
-            One golden path. Every agent ships faster.
+            One golden path.
+            <br />
+            Every agent ships faster.
           </h1>
           <p className="max-w-xl text-lg leading-relaxed">
             Vercel gives GoodEnough&apos;s teams one reviewed way to build and release AI agents: short-lived
-            credentials, a human approval on every write, and evals that gate each deploy. Less plumbing for each team,
-            and less time to market.
+            credentials, a human approval on every write, and evals that gate each deploy.
+            <br />
+            Less plumbing for each team, and accelerated time to market.
           </p>
           <div className="mt-2 flex flex-wrap justify-center gap-3">
             <Link className="cta h-[60px] px-9 text-base md:px-11 md:text-lg" href={ASSISTANT_PATH}>
