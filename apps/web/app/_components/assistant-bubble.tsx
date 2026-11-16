@@ -16,6 +16,7 @@ import { agentHref, CHAT_AGENTS, chatAgent, DEFAULT_AGENT, GUIDE_AGENT } from ".
 import { pageContext } from "./demo-guide";
 import { EveAgentChat } from "./eve-agent-chat";
 import { GuidePanel } from "./guide-panel";
+import { assignedPolicyIds } from "./policy-actions";
 
 /**
  * The AI assistant, floating in the corner of every page except the full assistant page. It
@@ -43,6 +44,23 @@ export function AssistantBubble() {
       window.clearTimeout(hide);
     };
   }, []);
+
+  // The Notes Summariser trusts a policy list its client sends. The full page gets that list from
+  // the server; here it is fetched the first time that agent is picked, and the chat waits for it.
+  const [policyIds, setPolicyIds] = useState<string>();
+  const needsPolicies = bubbleAgent === "notes-summariser" && policyIds === undefined;
+  useEffect(() => {
+    if (!needsPolicies) return;
+    let live = true;
+    void assignedPolicyIds()
+      .catch(() => "")
+      .then((ids) => {
+        if (live) setPolicyIds(ids);
+      });
+    return () => {
+      live = false;
+    };
+  }, [needsPolicies]);
 
   // The bubble closes itself on the full assistant page, which already shows the conversation.
   useEffect(() => {
@@ -162,8 +180,15 @@ export function AssistantBubble() {
         </div>
         {current.kind === "guide" ? (
           <GuidePanel compact />
+        ) : needsPolicies ? (
+          <div className="flex flex-1 items-center justify-center text-muted-foreground text-sm">Loading your policy list…</div>
         ) : current.kind === "ai-sdk" ? (
-          <AiSdkChat agent={current} compact key={`${current.id}:${reset}`} />
+          <AiSdkChat
+            agent={current}
+            compact
+            headers={current.id === "notes-summariser" ? { "x-user-policies": policyIds ?? "" } : undefined}
+            key={`${current.id}:${reset}`}
+          />
         ) : !isClaims ? (
           <EveAgentChat
             agent={current.id}

@@ -16,8 +16,9 @@ Everything here is synthetic. There are no real people, policies or claims.
 
 ## Identifying the pain
 
-Every team that built an agent before the platform solved the same problems alone, and solved them
-differently. GoodEnough is a composite, so these are not measurements from one customer. Each pain
+GoodEnough already mandates Vault for database credentials. Every team that built an agent before
+the platform still had to work out, alone, how its agent would log in to Vault, hold an approval,
+and survive a restart, and each solved it differently or not at all. GoodEnough is a composite, so these are not measurements from one customer. Each pain
 below is built into one of the three legacy agents in this repo, where you can trigger it yourself.
 
 ```mermaid
@@ -31,17 +32,19 @@ flowchart LR
   subgraph T3["Finance claims"]
     A3["Reserve Desk"]
   end
-  A1 --> S1["Own database password<br/>Own gateway key"]
+  V["Vault<br/>mandated for dynamic secrets"]
+  A1 & A2 & A3 -. "no identity to log in with" .-> V
+  A1 --> S1["Static database password<br/>Static gateway key"]
+  A2 --> S2["Static database password"]
+  A3 --> S3["Static database password<br/>Static gateway key"]
+  S1 & S2 & S3 -- "around Vault" --> DB[("Claims database")]
   A1 --> P1["Own approval check<br/>Own nightly job"]
-  A2 --> S2["Own database password"]
-  A3 --> S3["Own database password<br/>Own gateway key"]
   A3 --> P3["Own approval queue<br/>Own retry loop"]
-  S1 & S2 & S3 --> DB[("Claims database")]
 ```
 
 | Pain | How it shows up in the legacy agents | What the golden path does |
 | --- | --- | --- |
-| **Long-lived credentials** | Each agent holds a static database password and a static model key in its environment. They are never rotated, and one of them can read every table. | No standing secret. Each step gets a database user from Vault that lives for minutes, and model access uses the deployment's own identity. |
+| **Vault is mandated, but an agent has no way in** | To log in to Vault an agent must first prove who it is. Without a platform identity, each team has to solve that alone, and the usual answer is another stored secret. So the legacy agents go around Vault: each holds a static database password, two hold a static model key, and none is ever rotated. | Vercel signs an OIDC token for every deployment. The agent logs in to Vault with it and gets a database user that lives for minutes. Model access uses the same token. Nothing is stored. |
 | **Security review, one agent at a time** | Every agent has its own access rules, so each needs its own review from scratch. Some rules live only in the prompt: "I'm Sam" is believed. | Access is one reviewed Terraform module block per agent. Scope comes from the sign-in and the database, never from the conversation. |
 | **Durable workflows are hard to build** | Reserve Desk keeps pending approvals in memory and retries by hand. A redeploy loses the approval, and a retry applies the change twice. | The framework makes the wait durable. It survives restarts and redeploys, with nothing for the team to build. |
 | **Approvals that are not approvals** | Claims Helper accepts the word "approved" from anyone, including text in a claim note, and records itself as the approver. | Every write pauses for a supervisor other than the requester, and the record names both people. |
@@ -52,13 +55,17 @@ flowchart LR
 The first three were the starting hypotheses for this demo, and the code bears them out. The other
 four came from writing the legacy agents the way a team in a hurry would.
 
+The first diagram is the old way: Vault is there, but the agents reach the database around it. The
+second is the golden path: the identity Vercel gives every deployment is what opens Vault.
+
 ```mermaid
 flowchart TB
-  E["18 shared evals<br/>gate every deploy"] --> A["Any agent"]
+  E["18 shared evals<br/>gate every deploy"] --> A["Any agent on Vercel"]
   A --> G["Platform package<br/>@ge/golden-path"]
   A -- "every write" --> W["Durable approval<br/>by a supervisor"]
-  G -- "deployment identity" --> V["Vault<br/>database user for minutes"]
-  G -- "deployment identity" --> M["AI Gateway"]
+  G --> O["OIDC token<br/>signed by Vercel for each deployment<br/>nothing stored"]
+  O -- "logs in" --> V["Vault<br/>issues a database user for minutes"]
+  O -- "authenticates" --> M["AI Gateway"]
   V --> DB[("Claims database")]
 ```
 
