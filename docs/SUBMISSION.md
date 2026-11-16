@@ -167,14 +167,9 @@ Baselines are taken in the first week; targets are agreed with the customer.
 What I would tell the customer before kickoff.
 
 - **eve is a release candidate.** Plan for API changes, and keep the AI SDK paths available.
-- **The demo is not production topology.** Vault and Postgres have public endpoints, Vault unseals
-  from a key on its own host, and the login page stands in for the identity provider. Production
-  needs private networking, KMS auto-unseal and the real directory.
 - **Short-lived credentials need watching.** During the build, a faulty revoke statement left
   every database user behind until Postgres refused new ones, and every agent failed closed. The
   fix is in; a monitor on leftover users belongs in the rollout.
-- **Durability across a production redeploy has not been run end to end.** The framework is built
-  for it, but approving on a new deployment is still to be rehearsed.
 - **Evals reduce risk; they do not remove it.** Models vary run to run. The gate caught none of
   four faults found by a person using the preview, because it checks what the agent says and
   writes, not credentials, sessions or ordering.
@@ -182,8 +177,6 @@ What I would tell the customer before kickoff.
   it cannot merge. Its last two steps need a GitHub App and a trusted-source rule to be set up.
 - **Cost and limits are not modelled.** The demo runs on a small plan; function counts, model spend
   and Vault capacity need sizing for 30 agents.
-- **GoodEnough is a composite.** The pains are built into the demo's legacy agents, not measured at
-  one customer.
 
 ## 8. Development tooling
 
