@@ -12,6 +12,7 @@ import {
 } from "eve/events";
 import type { UseEveAgentReturn } from "eve/react";
 import { AlertCircleIcon, BrainIcon, Loader2Icon, SquareIcon } from "lucide-react";
+import { usePathname } from "next/navigation";
 import { Suspense, useState } from "react";
 import {
   Conversation,
@@ -31,6 +32,8 @@ import { Trace, TraceIcon, TraceLine, TraceTitle } from "@/components/ui/trace";
 import { cn } from "@/lib/utils";
 import { AgentMessage } from "./agent-message";
 import { useAssistant, useViewer } from "./assistant-provider";
+import { DEFAULT_AGENT } from "./chat-agents";
+import { pageContext, suggestionsFor, type PageContext } from "./demo-guide";
 import type { Viewer } from "@/lib/session";
 
 /** What an empty conversation shows: a heading, a line of help and starter prompts. */
@@ -41,30 +44,34 @@ export interface ChatIntro {
   readonly placeholder: string;
 }
 
-export function claimsIntro(canApprove: boolean): ChatIntro {
+const CLAIMS_BLURBS: Partial<Record<PageContext, string>> = {
+  data: "Ask about the claims behind any policy listed here, or ask to flag one for review.",
+  phone: "Ask to flag a claim, and the supervisors who may approve it get a text on their phone.",
+  walkthrough: "Try the prompts from the walkthrough here as you read.",
+};
+
+/** The Claims Assistant's empty state, with starter prompts for this page and this role. */
+export function claimsIntro(canApprove: boolean, page: PageContext): ChatIntro {
   return {
     title: "How can I help?",
     blurb:
-      "Ask about open claims on a policy you work on, or ask to flag a claim for review." +
+      (CLAIMS_BLURBS[page] ?? "Ask about open claims on a policy you work on, or ask to flag a claim for review.") +
       (canApprove ? " As a supervisor, you can approve flags others request." : " Flags wait for a supervisor's approval."),
-    suggestions: suggestionsFor(canApprove),
+    suggestions: suggestionsFor(DEFAULT_AGENT, page, canApprove),
     placeholder: "Ask about a policy or a claim…",
   };
 }
 
-/** Starter prompts, matched to what each role can do. */
-export function suggestionsFor(canApprove: boolean): readonly string[] {
-  return canApprove
-    ? [
-        "Summarize open claims for policy #2001.",
-        "Summarize open claims for policy #1042.",
-        "Show me the open claims for policy #3001.",
-      ]
-    : [
-        "Summarize open claims for policy #1042.",
-        "Flag claim 77 for review: possible duplicate invoice.",
-        "Show me the open claims for policy #2001.",
-      ];
+/** The Migration Advisor's empty state. */
+export function migrationIntro(page: PageContext, canApprove: boolean): ChatIntro {
+  return {
+    title: "Move a legacy agent onto the golden path",
+    blurb:
+      "I'll take you through it in seven steps: pick an agent, read its code, score it, ask what the code can't tell me, " +
+      "recommend a path, open a draft PR after you approve, and share the PR's preview with scores before and after.",
+    suggestions: suggestionsFor("migration", page, canApprove),
+    placeholder: "Answer, or ask about the assessment…",
+  };
 }
 
 /**
@@ -90,13 +97,14 @@ function LoadingConversation() {
 function AssistantChatBody({ variant }: { readonly variant: "page" | "panel" }) {
   const viewer = useViewer();
   const { agent, sessionId, sessionLink, ask } = useAssistant();
+  const page = pageContext(usePathname());
   if (!agent) return <LoadingConversation />;
   return (
     <EveChatBody
       agent={agent}
       ask={ask}
       canApprove={viewer.canApprove}
-      intro={claimsIntro(viewer.canApprove)}
+      intro={claimsIntro(viewer.canApprove, page)}
       sessionId={sessionId}
       sessionLink={sessionLink}
       variant={variant}
@@ -224,6 +232,10 @@ export function EveChatBody({
       )}
 
       <div className={cn("w-full shrink-0", compact ? "border-t bg-card p-3" : "mx-auto max-w-5xl px-4 pt-2 pb-6 sm:px-6")}>
+        {/* Once a conversation is under way the starter prompts move here, still matched to the page. */}
+        {!showEmptyState && !turnOpen && !isResuming ? (
+          <SuggestionChips onPick={(text) => void ask(text)} suggestions={intro.suggestions} />
+        ) : null}
         <PromptInput onSubmit={handleSubmit}>
           <PromptInputTextarea
             className={compact ? "min-h-12" : undefined}
@@ -270,6 +282,31 @@ export function EmptyState({
           </button>
         ))}
       </div>
+    </div>
+  );
+}
+
+/** Starter prompts as a single scrolling row above the composer. */
+export function SuggestionChips({
+  suggestions,
+  onPick,
+}: {
+  readonly suggestions: readonly string[];
+  readonly onPick: (text: string) => void;
+}) {
+  if (suggestions.length === 0) return null;
+  return (
+    <div aria-label="Suggested prompts" className="-mx-1 mb-2 flex gap-1.5 overflow-x-auto px-1 pb-1 [scrollbar-width:none]" role="group">
+      {suggestions.map((text) => (
+        <button
+          className="shrink-0 rounded-full border bg-background px-3 py-1 text-muted-foreground text-xs transition-colors hover:border-brand/40 hover:bg-brand-soft hover:text-foreground"
+          key={text}
+          onClick={() => onPick(text)}
+          type="button"
+        >
+          {text}
+        </button>
+      ))}
     </div>
   );
 }

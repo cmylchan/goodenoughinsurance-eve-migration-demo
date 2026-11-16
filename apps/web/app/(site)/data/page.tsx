@@ -1,8 +1,9 @@
-import { CarIcon, DatabaseIcon, HomeIcon, LockIcon, PlaneIcon, ShieldAlertIcon, type LucideIcon } from "lucide-react";
+import { CarIcon, DatabaseIcon, FlagIcon, HomeIcon, LockIcon, PlaneIcon, ShieldAlertIcon, type LucideIcon } from "lucide-react";
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { AskAssistantButton } from "@/app/_components/ask-assistant-button";
-import { policiesFor } from "@/lib/policies";
+import { findUser } from "@lib/identity";
+import { policiesFor, type FlagSummary } from "@/lib/policies";
 import { requireViewer } from "@/lib/session";
 
 export const metadata: Metadata = { title: "Data · GoodEnough Insurance" };
@@ -42,6 +43,76 @@ async function ViewerName() {
   return <>, {viewer.displayName}.</>;
 }
 
+/** Who a flag names: a person from the directory, or whatever else wrote the row. */
+function Person({ id }: { readonly id: string }) {
+  const user = findUser(id);
+  if (user) return <>{user.displayName}</>;
+  return (
+    <span className="inline-flex items-center gap-1.5">
+      <code>{id}</code>
+      <span className="rounded-full bg-amber-100 px-1.5 py-px font-bold text-[10px] text-amber-900 uppercase tracking-wide">Not a person</span>
+    </span>
+  );
+}
+
+/**
+ * The flags written on the viewer's policies: where an approved write can be seen to have landed.
+ * A flag is a row in claim_flags and does not change the claim's status, so without this list
+ * the only evidence is the tool result in the chat.
+ */
+function Flags({ flags }: { readonly flags: readonly FlagSummary[] | undefined }) {
+  return (
+    <section aria-labelledby="flags-heading" className="mt-14">
+      <h2 className="flex items-center gap-2 font-display text-2xl" id="flags-heading">
+        <FlagIcon className="size-5 text-brand" /> Flags for review
+      </h2>
+      <p className="mt-2 mb-6 max-w-2xl text-muted-foreground">
+        Each row is a flag that was written to a claim on one of your policies, with who asked for it and who approved
+        it. Reload the page after an approval to see it here.
+      </p>
+      {flags === undefined ? (
+        <div className="card-float px-6 py-8 text-center text-muted-foreground text-sm" role="status">
+          Flags can&apos;t be listed on this deployment yet: its read access doesn&apos;t include them.
+        </div>
+      ) : flags.length === 0 ? (
+        <div className="card-float px-6 py-8 text-center text-muted-foreground text-sm">
+          No claim on your policies has been flagged yet. Ask the assistant to flag one, and have a supervisor approve it.
+        </div>
+      ) : (
+        <div className="card-float overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="border-b bg-muted text-left text-muted-foreground text-xs uppercase tracking-wide">
+              <tr>
+                {["Claim", "Policy", "Reason", "Requested by", "Approved by", "Written"].map((heading) => (
+                  <th className="whitespace-nowrap px-4 py-3 font-medium" key={heading} scope="col">
+                    {heading}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody className="divide-y">
+              {flags.map((flag) => (
+                <tr className="align-top transition-colors hover:bg-brand-soft/40" key={`${flag.claimId}:${flag.at}:${flag.requestedBy}:${flag.approvedBy}`}>
+                  <td className="px-4 py-3 font-medium font-mono">{flag.claimId}</td>
+                  <td className="px-4 py-3 font-mono">#{flag.policyId}</td>
+                  <td className="min-w-48 px-4 py-3">{flag.reason}</td>
+                  <td className="whitespace-nowrap px-4 py-3">
+                    <Person id={flag.requestedBy} />
+                  </td>
+                  <td className="whitespace-nowrap px-4 py-3">
+                    <Person id={flag.approvedBy} />
+                  </td>
+                  <td className="whitespace-nowrap px-4 py-3 text-muted-foreground">{flag.at}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </section>
+  );
+}
+
 function PolicyTableSkeleton() {
   return (
     <div aria-hidden="true" className="card-float overflow-hidden">
@@ -59,7 +130,7 @@ function PolicyTableSkeleton() {
 
 async function PolicyTable() {
   const viewer = await requireViewer();
-  const list = await policiesFor(viewer.id);
+  const list = await policiesFor(viewer.id, { withFlags: true });
 
   return (
     <>
@@ -129,6 +200,7 @@ async function PolicyTable() {
               outside your scope aren&apos;t listed or counted.
             </span>
           </p>
+          <Flags flags={list.flags} />
         </>
       ) : (
         <div className="card-float px-6 py-10 text-center" role="status">

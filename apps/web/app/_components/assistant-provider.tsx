@@ -7,6 +7,10 @@
 // reply keeps streaming while the user moves between Home, Data and the assistant. The
 // current session id is remembered per signed-in user, so signing in as someone else never
 // shows the previous user's conversation (and eve's channel auth would refuse it anyway).
+//
+// A conversation link (/s/...) is a visit to someone else's conversation, to approve a write.
+// It is shown while that link is open and is never remembered: leaving the link returns the
+// visitor to their own conversation, so two users' chats stay separate.
 
 import { ClientError, type MessagePart } from "eve/client";
 import { activeTurn } from "eve/events";
@@ -29,6 +33,7 @@ import {
   type RefObject,
 } from "react";
 import { WEB_CHAT_AGENT } from "@/app/eve-agent";
+import { CHAT_AGENTS, DEFAULT_AGENT } from "./chat-agents";
 import type { Viewer } from "@/lib/session";
 
 import { ASSISTANT_PATH } from "./paths";
@@ -66,8 +71,20 @@ interface AssistantContextValue {
   readonly sessionLink: string | undefined;
   readonly bubbleOpen: boolean;
   readonly setBubbleOpen: (open: boolean) => void;
+  /** Which agent the bubble is showing: the Claims Assistant, another agent, or the demo guide. */
+  readonly bubbleAgent: string;
+  readonly setBubbleAgent: (agentId: string) => void;
   /** Send a message in the shared conversation, opening the bubble if the full page isn't showing. */
   readonly ask: (message: string | MessagePart[]) => Promise<void>;
+  /**
+   * Send a prompt to any agent. The Claims Assistant gets it at once; another agent's chat picks
+   * it up with `takePrompt` as soon as it is on screen (the bubble switches to it off the full page).
+   */
+  readonly askAgent: (agentId: string, prompt: string) => void;
+  /** A prompt waiting for an agent's chat to appear. Changes identity whenever one is queued. */
+  readonly queuedPrompt: { readonly agentId: string; readonly text: string } | undefined;
+  /** Claims the queued prompt for `agentId`, once. */
+  readonly takePrompt: (agentId: string) => string | undefined;
   readonly newChat: () => void;
 }
 
@@ -126,6 +143,20 @@ export function AssistantProvider({
   const agent = useSyncExternalStore(store.subscribe, store.get, () => undefined);
   const [sessionId, setSessionId] = useState<string>();
   const [bubbleOpen, setBubbleOpen] = useState(false);
+  const [bubbleAgent, setBubbleAgentState] = useState<string>(DEFAULT_AGENT);
+  const [queuedPrompt, setQueuedPrompt] = useState<{ readonly agentId: string; readonly text: string }>();
+  const queuedRef = useRef(queuedPrompt);
+
+  // The bubble reopens on the agent this browser last chose.
+  useEffect(() => {
+    const remembered = readStorage(BUBBLE_AGENT_KEY);
+    if (remembered !== undefined && CHAT_AGENTS.some((entry) => entry.id === remembered)) setBubbleAgentState(remembered);
+  }, []);
+
+  const setBubbleAgent = useCallback((agentId: string) => {
+    setBubbleAgentState(agentId);
+    writeStorage(BUBBLE_AGENT_KEY, agentId);
+  }, []);
   // Set by <ViewerSession> once it knows who is signed in.
   const newChatRef = useRef<() => void>(undefined);
 
@@ -133,13 +164,41 @@ export function AssistantProvider({
     async (message: string | MessagePart[]) => {
       const current = store.get();
       if (!current || current.status === "resuming") return;
-      if (!isAssistantPage(window.location.pathname)) setBubbleOpen(true);
+      if (!isAssistantPage(window.location.pathname)) {
+        setBubbleAgent(DEFAULT_AGENT);
+        setBubbleOpen(true);
+      }
       // A turn waiting on a person is still open: a new message steers it rather than queueing.
       const options = activeTurn(current.view) !== undefined ? { turnPolicy: "steer" as const } : undefined;
       await current.send(message, options);
     },
-    [store],
+    [setBubbleAgent, store],
   );
+
+  const askAgent = useCallback(
+    (agentId: string, prompt: string) => {
+      if (agentId === DEFAULT_AGENT) {
+        void ask(prompt);
+        return;
+      }
+      const queued = { agentId, text: prompt };
+      queuedRef.current = queued;
+      setQueuedPrompt(queued);
+      if (!isAssistantPage(window.location.pathname)) {
+        setBubbleAgent(agentId);
+        setBubbleOpen(true);
+      }
+    },
+    [ask, setBubbleAgent],
+  );
+
+  const takePrompt = useCallback((agentId: string) => {
+    const queued = queuedRef.current;
+    if (queued?.agentId !== agentId) return undefined;
+    queuedRef.current = undefined;
+    setQueuedPrompt(undefined);
+    return queued.text;
+  }, []);
 
   const newChat = useCallback(() => newChatRef.current?.(), []);
 
@@ -149,8 +208,22 @@ export function AssistantProvider({
       : `${window.location.origin}/s/${WEB_CHAT_AGENT}/${encodeURIComponent(sessionId)}`;
 
   const value = useMemo<AssistantContextValue>(
-    () => ({ viewerPromise, agent, sessionId, sessionLink, bubbleOpen, setBubbleOpen, ask, newChat }),
-    [viewerPromise, agent, sessionId, sessionLink, bubbleOpen, ask, newChat],
+    () => ({
+      viewerPromise,
+      agent,
+      sessionId,
+      sessionLink,
+      bubbleOpen,
+      setBubbleOpen,
+      bubbleAgent,
+      setBubbleAgent,
+      ask,
+      askAgent,
+      queuedPrompt,
+      takePrompt,
+      newChat,
+    }),
+    [viewerPromise, agent, sessionId, sessionLink, bubbleOpen, bubbleAgent, setBubbleAgent, ask, askAgent, queuedPrompt, takePrompt, newChat],
   );
 
   return (
@@ -208,32 +281,46 @@ function ConversationSlot({
     [onSessionId],
   );
 
-  // First render in the browser: a conversation link wins, else whatever this user was last in.
+  // Whether the conversation on screen was opened from a link. Such a visit is never stored.
+  const visiting = useRef(false);
+
+  // First render in the browser: an open conversation link wins, else this user's own conversation.
   useEffect(() => {
     const remembered = readStorage(storageKey);
     const initial = linkSession ?? remembered;
     handledLink.current = linkSession;
-    if (linkSession !== undefined) writeStorage(storageKey, linkSession);
+    visiting.current = linkSession !== undefined;
     setSlot({ key: 0, sessionId: initial, remembered: linkSession === undefined && remembered !== undefined });
     setSessionId(initial);
     // Runs once per signed-in user; later links are handled below.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [storageKey]);
 
-  // Following a conversation link while already in the app switches to that conversation.
+  // Following a conversation link while already in the app shows that conversation; leaving the
+  // link goes back to this user's own.
   useEffect(() => {
     if (!ready || linkSession === handledLink.current) return;
     handledLink.current = linkSession;
-    if (linkSession === undefined || linkSession === sessionIdRef.current) return;
-    setSlot((previous) => ({ key: (previous?.key ?? 0) + 1, sessionId: linkSession, remembered: false }));
-    setSessionId(linkSession);
-    writeStorage(storageKey, linkSession);
+    if (linkSession !== undefined) {
+      visiting.current = true;
+      if (linkSession === sessionIdRef.current) return;
+      setSlot((previous) => ({ key: (previous?.key ?? 0) + 1, sessionId: linkSession, remembered: false }));
+      setSessionId(linkSession);
+      return;
+    }
+    if (!visiting.current) return;
+    visiting.current = false;
+    const own = readStorage(storageKey);
+    if (own === sessionIdRef.current) return;
+    setSlot((previous) => ({ key: (previous?.key ?? 0) + 1, sessionId: own, remembered: own !== undefined }));
+    setSessionId(own);
   }, [linkSession, ready, setSessionId, storageKey]);
 
   const onSessionChange = useCallback(
     (next: string | undefined) => {
       setSessionId(next);
-      writeStorage(storageKey, next);
+      // Only this user's own conversation is remembered, never one they are visiting.
+      if (!visiting.current) writeStorage(storageKey, next);
     },
     [setSessionId, storageKey],
   );
@@ -247,6 +334,8 @@ function ConversationSlot({
 
   useEffect(() => {
     newChatRef.current = () => {
+      // A new chat is always this user's own, even when started from someone's conversation link.
+      visiting.current = false;
       store.get()?.newSession();
       onSessionChange(undefined);
       // Leaving a conversation link: the full page for a fresh chat lives at /assistant.
@@ -313,6 +402,8 @@ const AgentHost = memo(function AgentHost({
 
   return null;
 });
+
+const BUBBLE_AGENT_KEY = "ge:bubble-agent";
 
 const STALE_CODES = new Set(["session_expired", "session_stranded", "session_not_active", "forbidden", "unauthorized"]);
 

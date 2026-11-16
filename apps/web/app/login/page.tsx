@@ -9,7 +9,7 @@ import { LoginForm } from "./login-form";
 // cookie, in its own Suspense boundary, and it renders nothing.
 export default function LoginPage() {
   return (
-    <main className="relative flex min-h-dvh flex-col items-center overflow-hidden bg-background px-4 pt-[12vh] pb-[240px] text-foreground md:pb-[320px]">
+    <main className="relative flex min-h-dvh flex-col items-center overflow-hidden bg-background px-4 pt-[8vh] pb-[240px] text-foreground md:pb-[320px]">
       <Suspense fallback={null}>
         <RedirectIfSignedIn />
       </Suspense>
@@ -23,8 +23,8 @@ export default function LoginPage() {
           <LoginForm />
         </div>
         <p className="text-center text-muted-foreground text-xs">
-          Demo environment with synthetic data. This login stands in for the corporate identity provider; test users
-          are listed in the repository README.
+          Demo environment with synthetic data. This login stands in for the corporate identity provider. To see both
+          roles at once, sign in as the other user in a private window.
         </p>
       </div>
       <div className="pointer-events-none absolute inset-x-0 bottom-0 h-[220px] md:h-[300px]">

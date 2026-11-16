@@ -50,7 +50,7 @@ async function ViewerChip() {
         </span>
         <span className="hidden flex-col leading-tight lg:flex">
           <span className="font-bold text-sm">{viewer.displayName}</span>
-          <span className="text-muted-foreground text-xs">{viewer.title}</span>
+          <span className="whitespace-nowrap text-muted-foreground text-xs">{viewer.title}</span>
         </span>
       </span>
       <form action={signOut}>

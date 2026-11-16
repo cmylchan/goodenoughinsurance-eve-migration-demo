@@ -4,6 +4,8 @@
 .vercel/
 .agent/
 infra/.secrets/
+# The operator's runbook: host names, access steps and recovery commands. Kept locally only.
+docs/TROUBLESHOOTING.md
 **/.terraform/
 *.tfstate*
 *.auto.tfvars

@@ -65,5 +65,5 @@ async function CannotApproveNote() {
 }
 
 function PhoneSkeleton() {
-  return <div aria-hidden="true" className="h-[640px] max-h-[calc(100dvh-9rem)] max-md:max-h-[calc(100dvh-16rem)] w-full max-w-[340px] shrink-0 animate-pulse rounded-[2.25rem] border-[10px] border-muted bg-muted/60" />;
+  return <div aria-hidden="true" className="h-[640px] max-h-[calc(100dvh-9rem)] max-xl:max-h-[calc(100dvh-16rem)] w-full max-w-[340px] shrink-0 animate-pulse rounded-[2.25rem] border-[10px] border-muted bg-muted/60" />;
 }

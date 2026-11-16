@@ -3,7 +3,7 @@ import { Loader2Icon } from "lucide-react";
 /** The full assistant page while the request (agent choice, session) streams in. Same layout, so no shift. */
 export function AssistantPageSkeleton() {
   return (
-    <main className="flex h-[calc(100dvh-70px)] flex-col max-md:h-[calc(100dvh-115px)]" data-fills-viewport="">
+    <main className="flex h-[calc(100dvh-70px)] flex-col max-xl:h-[calc(100dvh-115px)]" data-fills-viewport="">
       <div className="border-b bg-muted">
         <div className="mx-auto flex max-w-5xl items-center justify-between gap-3 px-4 py-3 sm:px-6">
           <div className="flex flex-col gap-1.5">

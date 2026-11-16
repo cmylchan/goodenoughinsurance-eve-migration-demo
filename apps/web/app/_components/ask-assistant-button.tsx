@@ -1,7 +1,7 @@
 "use client";
 
-import { MessageSquareIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { AssistantIcon } from "./assistant-icon";
 import { useAssistant } from "./assistant-provider";
 
 /** Asks the shared Claims Assistant a question, opening the bubble to show the answer. */
@@ -15,7 +15,7 @@ export function AskAssistantButton({ prompt, label = "Ask assistant" }: { readon
       title={prompt}
       variant="outline"
     >
-      <MessageSquareIcon /> {label}
+      <AssistantIcon className="size-4" /> {label}
     </Button>
   );
 }
