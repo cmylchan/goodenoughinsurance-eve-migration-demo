@@ -2,8 +2,9 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { cacheLife } from "next/cache";
 
-// The Walkthrough tab shows the repository's README. It is read from GitHub, not copied into the
-// app, so an edit pushed to the repository appears on the site without a deploy. Production reads
+// Two tabs show documents from the repository: Walkthrough (README.md) and the SA submission
+// (docs/SUBMISSION.md). They are read from GitHub, not copied into the app, so an edit pushed to
+// the repository appears on the site without a deploy. Production reads
 // the default branch; a preview reads its own branch, so a README change can be reviewed there.
 const OWNER = process.env.VERCEL_GIT_REPO_OWNER ?? "cmylchan";
 const REPO = process.env.VERCEL_GIT_REPO_SLUG ?? "goodenoughinsurance-eve-migration-demo";
@@ -21,9 +22,12 @@ export interface Readme {
   readonly rawBase: string;
 }
 
-async function fromGitHub(ref: string): Promise<string | undefined> {
+/** The documents the site may show. A fixed list, so a path can never come from a request. */
+export type DocFile = "README.md" | "docs/SUBMISSION.md";
+
+async function fromGitHub(ref: string, file: DocFile): Promise<string | undefined> {
   try {
-    const response = await fetch(`https://raw.githubusercontent.com/${OWNER}/${REPO}/${encodeURIComponent(ref)}/README.md`, {
+    const response = await fetch(`https://raw.githubusercontent.com/${OWNER}/${REPO}/${encodeURIComponent(ref)}/${file}`, {
       signal: AbortSignal.timeout(5000),
     });
     return response.ok ? await response.text() : undefined;
@@ -33,11 +37,11 @@ async function fromGitHub(ref: string): Promise<string | undefined> {
 }
 
 /** The copy that shipped with this deployment. The app runs from apps/web, two levels down. */
-async function bundled(): Promise<string | undefined> {
+async function bundled(file: DocFile): Promise<string | undefined> {
   // The file is added to the function by outputFileTracingIncludes, so the bundler needn't trace these paths.
-  for (const file of [path.join(/*turbopackIgnore: true*/ process.cwd(), "../../README.md"), path.join(/*turbopackIgnore: true*/ process.cwd(), "README.md")]) {
+  for (const candidate of [path.join(/*turbopackIgnore: true*/ process.cwd(), "../..", file), path.join(/*turbopackIgnore: true*/ process.cwd(), file)]) {
     try {
-      return await readFile(/*turbopackIgnore: true*/ file, "utf8");
+      return await readFile(/*turbopackIgnore: true*/ candidate, "utf8");
     } catch {
       // Try the next place.
     }
@@ -46,31 +50,32 @@ async function bundled(): Promise<string | undefined> {
 }
 
 /**
- * The README, cached and refreshed in the background: a visitor never waits on GitHub, and an
+ * One document, cached and refreshed in the background: a visitor never waits on GitHub, and an
  * edit shows up within about five minutes.
  */
-export async function loadReadme(): Promise<Readme | undefined> {
+export async function loadReadme(file: DocFile = "README.md"): Promise<Readme | undefined> {
   "use cache";
   cacheLife({ stale: 60, revalidate: 300, expire: 60 * 60 * 24 });
 
   // A branch that was deleted after its preview was built falls back to the default branch.
   let ref = REF;
-  let markdown = await fromGitHub(ref);
+  let markdown = await fromGitHub(ref, file);
   if (markdown === undefined && ref !== "main") {
     ref = "main";
-    markdown = await fromGitHub(ref);
+    markdown = await fromGitHub(ref, file);
   }
   const source = markdown === undefined ? "bundled" : "github";
-  markdown ??= await bundled();
+  markdown ??= await bundled(file);
   if (markdown === undefined) return undefined;
 
   return {
     markdown,
     source,
     ref,
-    htmlUrl: `https://github.com/${OWNER}/${REPO}/blob/${ref}/README.md`,
-    blobBase: `https://github.com/${OWNER}/${REPO}/blob/${ref}/`,
-    rawBase: `https://raw.githubusercontent.com/${OWNER}/${REPO}/${ref}/`,
+    htmlUrl: `https://github.com/${OWNER}/${REPO}/blob/${ref}/${file}`,
+    // Relative links resolve against the document's own folder, as they do on GitHub.
+    blobBase: new URL(file, `https://github.com/${OWNER}/${REPO}/blob/${ref}/`).href.replace(/[^/]*$/, ""),
+    rawBase: new URL(file, `https://raw.githubusercontent.com/${OWNER}/${REPO}/${ref}/`).href.replace(/[^/]*$/, ""),
   };
 }
 

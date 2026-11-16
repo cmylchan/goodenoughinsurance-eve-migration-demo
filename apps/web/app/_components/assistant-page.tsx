@@ -47,7 +47,7 @@ export function AssistantPage({
 
   return (
     // Fills the viewport under the header so the composer stays at the bottom.
-    <main className="flex h-[calc(100dvh-70px)] flex-col max-md:h-[calc(100dvh-115px)]" data-fills-viewport="">
+    <main className="flex h-[calc(100dvh-70px)] flex-col max-xl:h-[calc(100dvh-115px)]" data-fills-viewport="">
       <div className="border-b bg-muted">
         <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-x-3 gap-y-2 px-4 py-3 sm:px-6">
           <div className="min-w-0">

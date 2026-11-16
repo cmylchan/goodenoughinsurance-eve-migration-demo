@@ -10,7 +10,7 @@ export function pageContext(pathname: string | null): PageContext {
   if (!pathname || pathname === "/") return "home";
   if (pathname.startsWith("/data")) return "data";
   if (pathname.startsWith("/phone")) return "phone";
-  if (pathname.startsWith("/walkthrough")) return "walkthrough";
+  if (pathname.startsWith("/walkthrough") || pathname.startsWith("/submission")) return "walkthrough";
   if (pathname.startsWith("/legacy/reserve-desk")) return "approvals";
   if (pathname.startsWith("/assistant") || pathname.startsWith("/s/")) return "assistant";
   return "home";

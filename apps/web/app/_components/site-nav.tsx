@@ -12,6 +12,7 @@ const NAV = [
   { href: "/data", label: "Data", active: (path: string) => path.startsWith("/data") },
   { href: "/phone", label: "Phone", active: (path: string) => path.startsWith("/phone") },
   { href: "/walkthrough", label: "Walkthrough", active: (path: string) => path.startsWith("/walkthrough") },
+  { href: "/submission", label: "SA Submission", active: (path: string) => path.startsWith("/submission") },
 ] as const;
 
 /** The main links. Without `highlight` it never reads the URL, so it can be a prerendered fallback. */
@@ -32,8 +33,8 @@ function Links({ pathname }: { readonly pathname: string | undefined }) {
           <Link
             aria-current={active ? "page" : undefined}
             className={cn(
-              "relative whitespace-nowrap px-3 py-2 text-[15px] transition-colors",
-              "after:absolute after:inset-x-3 after:-bottom-px after:h-0.5 after:origin-left after:scale-x-0 after:rounded-full after:bg-brand after:transition-transform",
+              "relative whitespace-nowrap px-2.5 py-2 text-[15px] transition-colors",
+              "after:absolute after:inset-x-2.5 after:-bottom-px after:h-0.5 after:origin-left after:scale-x-0 after:rounded-full after:bg-brand after:transition-transform",
               active ? "font-bold text-foreground after:scale-x-100" : "text-muted-foreground hover:text-foreground",
             )}
             href={item.href}

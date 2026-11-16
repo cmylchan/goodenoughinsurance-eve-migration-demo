@@ -104,7 +104,7 @@ export function PhoneScreen({ name, phone, canApprove }: { readonly name: string
   return (
     <section
       aria-label={`${name}'s simulated phone`}
-      className="flex h-[640px] max-h-[calc(100dvh-9rem)] max-md:max-h-[calc(100dvh-16rem)] w-full max-w-[340px] shrink-0 flex-col overflow-hidden rounded-[2.25rem] border-[10px] border-foreground bg-card shadow-[var(--shadow-card-hover)]"
+      className="flex h-[640px] max-h-[calc(100dvh-9rem)] max-xl:max-h-[calc(100dvh-16rem)] w-full max-w-[340px] shrink-0 flex-col overflow-hidden rounded-[2.25rem] border-[10px] border-foreground bg-card shadow-[var(--shadow-card-hover)]"
     >
       <div className="flex items-center justify-between bg-foreground px-5 pt-1 pb-2 text-[11px] text-background">
         <span className="font-medium">{phone}</span>
