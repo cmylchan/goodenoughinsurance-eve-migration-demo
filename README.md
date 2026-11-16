@@ -3,7 +3,7 @@
 How Vercel helps a company move its legacy AI agents onto one golden path, with AI doing most of the
 migration work.
 
-**GoodEnough Insurance** is a composite regional insurer that already mandates Vault dynamic secrets
+**GoodEnough Insurance** is a fictional regional insurer that already mandates Vault dynamic secrets
 on AWS. About 30 agents across its teams each rebuilt the same plumbing in their own way. This repo is
 the platform team's answer, shown as two demos:
 
@@ -18,7 +18,7 @@ Everything here is synthetic. There are no real people, policies or claims.
 
 GoodEnough already mandates Vault for database credentials. Every team that built an agent before
 the platform still had to work out, alone, how its agent would log in to Vault, hold an approval,
-and survive a restart, and each solved it differently or not at all. GoodEnough is a composite, so these are not measurements from one customer. Each pain
+and survive a restart, and each solved it differently or not at all. GoodEnough is fictional, so these are not measurements from a real customer. Each pain
 below is built into one of the three legacy agents in this repo, where you can trigger it yourself.
 
 ```mermaid

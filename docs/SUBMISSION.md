@@ -1,7 +1,7 @@
 # One golden path for GoodEnough's AI agents
 
 A proposal to put GoodEnough Insurance's AI agents on one reviewed path on Vercel, with a working
-demo. GoodEnough is a composite customer and all data in the demo is synthetic.
+demo. GoodEnough is a fictional customer and all data in the demo is synthetic.
 
 ## 1. Problem statement
 
