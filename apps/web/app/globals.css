@@ -324,3 +324,13 @@
     animation: launcher-halo 2.8s ease-out infinite;
   }
 }
+
+/* Diagrams in the Walkthrough fill the column instead of shrinking to a thumbnail. */
+.readme [data-streamdown="mermaid"] div:has(> svg) {
+  width: 100%;
+}
+.readme [data-streamdown="mermaid"] svg {
+  width: 100%;
+  height: auto;
+  max-height: 560px;
+}

@@ -122,3 +122,24 @@ export function splitReadme(markdown: string): ReadmeParts {
   }
   return { title, body: body.join("\n").trim(), sections };
 }
+
+/**
+ * Points the README's relative links at GitHub and its relative images at the raw files. The
+ * Markdown renderer refuses relative URLs, so this happens before it sees them. Fenced code is
+ * left alone.
+ */
+export function absolutize(markdown: string, blobBase: string, rawBase: string): string {
+  let fenced = false;
+  return markdown
+    .split("\n")
+    .map((line) => {
+      if (/^\s*(```|~~~)/.test(line)) fenced = !fenced;
+      if (fenced) return line;
+      return line.replace(/(!?)\[([^\]]*)\]\(([^)\s]+)\)/g, (match, bang: string, text: string, target: string) => {
+        if (/^(?:[a-z][a-z0-9+.-]*:|#|\/\/)/i.test(target)) return match;
+        const base = bang ? rawBase : blobBase;
+        return `${bang}[${text}](${new URL(target, base).href})`;
+      });
+    })
+    .join("\n");
+}

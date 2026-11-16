@@ -1,5 +1,9 @@
 "use client";
 
+import { cjk } from "@streamdown/cjk";
+import { code } from "@streamdown/code";
+import { math } from "@streamdown/math";
+import { createMermaidPlugin } from "@streamdown/mermaid";
 import { ArrowRightIcon } from "lucide-react";
 import Link from "next/link";
 import { Children, isValidElement, type ComponentProps, type ReactNode } from "react";
@@ -32,6 +36,33 @@ const PROMPTS = new Map(
     .flatMap((chapter) => chapter.steps)
     .flatMap((step) => (step.prompt && step.agent ? [[step.prompt, step.agent] as const] : [])),
 );
+
+// Diagrams in the README are drawn in the site's palette: white boxes, grey outlines, burgundy
+// arrows, Lato. GitHub draws the same source in its own default theme.
+const plugins = {
+  cjk,
+  code,
+  math,
+  mermaid: createMermaidPlugin({
+    config: {
+      theme: "base",
+      themeVariables: {
+        fontFamily: "Lato, Helvetica Neue, Arial, sans-serif",
+        fontSize: "15px",
+        primaryColor: "#ffffff",
+        primaryTextColor: "#4a4a4a",
+        primaryBorderColor: "#a3a3a3",
+        lineColor: "#8a1538",
+        secondaryColor: "#f6ecef",
+        tertiaryColor: "#f7f7f7",
+        clusterBkg: "#f7f7f7",
+        clusterBorder: "#dadada",
+        edgeLabelBackground: "#ffffff",
+      },
+      flowchart: { curve: "basis", padding: 14 },
+    },
+  }),
+};
 
 const SITE_HOSTS = new Set(["claims-agent-eve.vercel.app"]);
 
@@ -71,6 +102,8 @@ export function ReadmeView({
         "readme text-[16px] leading-[1.75]",
         "[&_p]:my-4 [&_ul]:my-4 [&_ol]:my-4 [&_li]:my-1.5 [&_ol]:pl-6 [&_ul]:pl-6 [&_ul]:list-disc [&_ol]:list-decimal [&_li]:marker:text-brand [&_li]:marker:font-bold",
         "[&_strong]:font-bold [&_strong]:text-foreground [&_hr]:my-10",
+        // A document's tables wrap to the column; a chat's keep each column at its natural width.
+        "[&_table]:w-full [&_td]:max-w-none [&_th]:whitespace-normal [&_td]:text-[14px] [&_td]:leading-relaxed",
       )}
       components={
         {
@@ -136,6 +169,7 @@ export function ReadmeView({
         } as unknown as ComponentProps<typeof MessageResponse>["components"]
       }
       mode="static"
+      plugins={plugins}
     >
       {markdown}
     </MessageResponse>

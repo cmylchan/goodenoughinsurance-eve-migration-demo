@@ -2,7 +2,7 @@ import { BookOpenIcon } from "lucide-react";
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { ReadmeView } from "@/app/_components/readme-view";
-import { loadReadme, README_REPO_URL, splitReadme } from "@/lib/readme";
+import { absolutize, loadReadme, README_REPO_URL, splitReadme } from "@/lib/readme";
 
 export const metadata: Metadata = { title: "Walkthrough · GoodEnough Insurance" };
 
@@ -56,7 +56,7 @@ async function Walkthrough() {
           </nav>
         ) : null}
         <article className="min-w-0 max-w-3xl">
-          <ReadmeView blobBase={readme.blobBase} markdown={body} rawBase={readme.rawBase} />
+          <ReadmeView blobBase={readme.blobBase} markdown={absolutize(body, readme.blobBase, readme.rawBase)} rawBase={readme.rawBase} />
         </article>
       </div>
     </main>

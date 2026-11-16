@@ -53,13 +53,13 @@ The first three were the starting hypotheses for this demo, and the code bears t
 four came from writing the legacy agents the way a team in a hurry would.
 
 ```mermaid
-flowchart LR
-  A["Any agent"] --> G["Platform package<br/>@ge/golden-path"]
+flowchart TB
+  E["18 shared evals<br/>gate every deploy"] --> A["Any agent"]
+  A --> G["Platform package<br/>@ge/golden-path"]
+  A -- "every write" --> W["Durable approval<br/>by a supervisor"]
   G -- "deployment identity" --> V["Vault<br/>database user for minutes"]
   G -- "deployment identity" --> M["AI Gateway"]
   V --> DB[("Claims database")]
-  A -- "every write" --> W["Durable approval<br/>by a supervisor"]
-  E["18 shared evals"] -- "gate every deploy" --> A
 ```
 
 ## The three rules
