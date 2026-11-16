@@ -33,6 +33,18 @@ writes nobody approved.
 
 ## 2. Current-state and target-state architecture
 
+### Where Vercel fits: Connect, underpinned by Replace
+
+| Role | Does it apply? | What it means here |
+| --- | --- | --- |
+| **Connect** | **Yes. This is the design.** | Agents hosted on Vercel securely use the systems that already matter to GoodEnough: Vault, the claims database, the identity provider. None of them moves. The connection is the deployment's own OIDC identity, so nothing is stored on either side. |
+| **Replace** | **Yes. It is what makes Connect safe to repeat 30 times.** | Vercel takes the place of the layer every team was hand-building: approval queues, retry loops, nightly-job wrappers, model keys and routing, preview environments, and a release gate. None of that work is specific to insurance. |
+| **Augment** | In part, for agents that should stay where they are. | Not every agent is rebuilt. The Notes Summariser keeps its AI SDK shape and Reserve Desk stays inside its own app; each gains the platform package, AI Gateway and the eval gate. |
+
+Connect alone would leave each team to build the plumbing again, on a new host. Replace alone would
+ask the customer to move systems it has good reason to keep. Together: the customer's systems stay
+put, and the undifferentiated work between an agent and those systems is no longer each team's job.
+
 **Current state.** Vault exists, and the agents go around it.
 
 ```mermaid
