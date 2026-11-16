@@ -1,4 +1,4 @@
-import { BookOpenIcon, GitBranchIcon, RefreshCwIcon } from "lucide-react";
+import { BookOpenIcon } from "lucide-react";
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { ReadmeView } from "@/app/_components/readme-view";
@@ -28,22 +28,11 @@ async function Walkthrough() {
         <div className="mx-auto flex max-w-6xl flex-col gap-4 px-4 py-12 sm:px-6 md:py-16">
           <p className="font-bold text-brand text-xs uppercase tracking-[0.2em]">Demo walkthrough</p>
           <h1 className="max-w-4xl font-display text-[32px] leading-[1.3] md:text-[46px]">{title ?? "How this demo works"}</h1>
-          <p className="flex flex-wrap items-center gap-x-5 gap-y-2 text-muted-foreground text-sm">
-            <span className="inline-flex items-center gap-1.5">
-              <BookOpenIcon className="size-4 text-brand" />
-              <a className="underline underline-offset-4 hover:text-foreground" href={readme.htmlUrl} rel="noreferrer" target="_blank">
-                README.md on GitHub
-              </a>
-            </span>
-            <span className="inline-flex items-center gap-1.5">
-              <GitBranchIcon className="size-4 text-brand" /> {readme.ref}
-            </span>
-            <span className="inline-flex items-center gap-1.5">
-              <RefreshCwIcon className="size-4 text-brand" />
-              {readme.source === "github"
-                ? "Kept in step with the repository: edits appear here within minutes."
-                : "GitHub couldn't be reached, so this is the copy from the last deploy."}
-            </span>
+          <p className="flex items-center gap-1.5 text-muted-foreground text-sm">
+            <BookOpenIcon className="size-4 text-brand" />
+            <a className="underline underline-offset-4 hover:text-foreground" href={readme.htmlUrl} rel="noreferrer" target="_blank">
+              README.md on GitHub
+            </a>
           </p>
         </div>
       </section>
