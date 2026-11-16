@@ -121,6 +121,8 @@ sandbox (legacy code is read there and never run), and the Marketplace (Neon Pos
 
 - **Live:** https://claims-agent-eve.vercel.app
 - **Repository:** https://github.com/cmylchan/goodenoughinsurance-eve-migration-demo
+  (four pull requests were squash-merged; their original commits are on each pull request's
+  Commits tab, linked from the README's [Commit history](../README.md#commit-history))
 
 The sign-in page lists the two test users. The Demo Guide in the chat (the compass button) runs
 both demos step by step:
@@ -146,21 +148,35 @@ After cutover: drop the legacy role, delete its secrets, and remove the legacy c
 
 ## 6. Success measures
 
-Baselines are taken in the first week; targets are agreed with the customer.
+The technical baselines are what the three legacy agents in the demo do today. GoodEnough is
+fictional, so the business baselines are **assumptions for a regional insurer of this size**: the
+first week of the engagement replaces them with the customer's own numbers, and the targets are then
+agreed with them.
 
 **Technical**
-- Standing secrets held by agents: zero.
-- Lifetime of a database credential: minutes, and none exists while a write waits.
-- Writes recorded with a named requester and a different named approver: 100%.
-- Evals passed before every promotion: 18 of 18.
-- Pending approvals lost across a deploy: zero.
-- Database users left behind after a step: zero.
+
+| Measure | Today (legacy agents) | Target (golden path) | How it is measured |
+| --- | --- | --- | --- |
+| Standing secrets held by agents | 4 (3 database passwords, 1 model key shared by 2 agents), never rotated | 0 | Count of secret-valued variables on agent projects |
+| Lifetime of a database credential | Indefinite | Revoked at the end of each step; 5-minute default and 10-minute ceiling as backstops; none while a write waits | Vault lease TTLs and audit log |
+| Writes with a named requester and a different named approver | 0% (Claims Helper records itself) | 100% | `claim_flags.requested_by` ≠ `approved_by` |
+| Pending approvals lost across a deploy | All (Reserve Desk holds them in memory) | 0 | Approve-after-redeploy test each release |
+| Evals passed before promotion | No gate | 18 of 18, required check | Deployment Check status |
+| Database users left after a step | Not tracked | 0, with an alert above 0 | Count of Vault-issued roles in Postgres |
 
 **Business**
-- Time from an agent idea to production.
-- Security review time per agent.
-- Agents on the golden path, out of about 30.
-- Incidents involving agent credentials, unapproved writes or exposed policyholder identifiers.
+
+| Measure | Assumed baseline | Target | How it is measured |
+| --- | --- | --- | --- |
+| Time from an agent idea to production | About 12 weeks, mostly plumbing and review | 3 weeks | First commit to first production promotion |
+| Security review per agent | About 3 weeks, from scratch each time | 3 working days: one Terraform block, shared evals | Review ticket opened to approved |
+| Engineering time spent on plumbing per agent | About 6 engineer-weeks | Under 1 week | Team estimates at each migration retro |
+| Agents on the golden path, out of about 30 | 0 | 10 within two quarters, all 30 within a year | Agents whose project uses `@ge/golden-path` |
+| Incidents involving agent credentials, unapproved writes or exposed policyholder identifiers | Taken from the incident log in week one | 0 on migrated agents | Incident log, tagged by agent |
+
+The business case rests on the first two rows: if 30 agents each save about 9 weeks of delivery
+time and 2 to 3 weeks of security review, the platform pays for itself well before the last
+migration.
 
 ## 7. Known limitations and risks
 

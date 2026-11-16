@@ -221,6 +221,20 @@ the agent. The project's only environment variables are two addresses (`VAULT_AD
 **Network note.** Vault and Postgres have public TLS endpoints in this demo; in production they sit in
 the customer's private VPC, reached through Secure Compute peering.
 
+## Commit history
+
+Four pull requests were squash-merged, so on `main` each shows as one commit. GitHub keeps their
+original commits, in order and with their messages, on each pull request's Commits tab:
+
+| Pull request | Original commits |
+| --- | --- |
+| [#2 Portal frontend](https://github.com/cmylchan/goodenoughinsurance-eve-migration-demo/pull/2/commits) | 2 |
+| [#3 Migration advisor](https://github.com/cmylchan/goodenoughinsurance-eve-migration-demo/pull/3/commits) | 3 |
+| [#5 Data as tables](https://github.com/cmylchan/goodenoughinsurance-eve-migration-demo/pull/5/commits) | 4 |
+| [#6 Walkthrough, Demo Guide, fixes](https://github.com/cmylchan/goodenoughinsurance-eve-migration-demo/pull/6/commits) | 25 |
+
+To read one locally: `git fetch origin pull/6/head:pr-6 && git log pr-6`.
+
 ## What is in the repo
 
 ```
