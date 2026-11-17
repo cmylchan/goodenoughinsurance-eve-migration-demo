@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 import { isAssistantPage, useAssistant, useViewer } from "./assistant-provider";
 import { agentHref, chatAgent, DEFAULT_AGENT } from "./chat-agents";
 import { guideChapters, pageContext, pageGuidance, PAGE_NAMES, type GuideStep } from "./demo-guide";
+import { hasOpenApproval } from "./open-approval";
 
 const TALKING_KEY = "ge:guide-talking-points";
 
@@ -76,7 +77,7 @@ export function GuidePanel({ compact }: { readonly compact: boolean }) {
   const guidance = pageGuidance(page, viewer.canApprove);
   // The step that belongs on this page, unless it is the next step anyway and already highlighted below.
   const pageStep = steps.find((step) => step.id === guidance.stepId && step.id !== next?.id);
-  const claimsReady = claims !== undefined && claims.status !== "resuming";
+  const claimsReady = claims !== undefined && claims.status !== "resuming" && !hasOpenApproval(claims.view);
 
   const run = (step: GuideStep) => {
     if (step.prompt === undefined || step.agent === undefined) return;

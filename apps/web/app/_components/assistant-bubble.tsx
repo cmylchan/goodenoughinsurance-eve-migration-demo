@@ -117,7 +117,7 @@ export function AssistantBubble() {
       <section
         aria-label="AI assistant"
         className={cn(
-          "fixed right-4 bottom-24 z-40 flex flex-col overflow-hidden rounded-[20px] border bg-background shadow-[0_24px_80px_-20px_rgb(0_0_0/0.35)] transition-all duration-200 sm:right-6",
+          "fixed right-4 bottom-24 z-40 flex flex-col overflow-hidden rounded-[20px] border bg-background shadow-[0_24px_80px_-20px_rgb(0_0_0/0.35)] transition-[width,height,opacity,translate,visibility] duration-200 sm:right-6",
           wide ? "h-[min(820px,calc(100dvh-8rem))] w-[min(960px,calc(100vw-3rem))]" : "h-[min(640px,calc(100dvh-8rem))] w-[min(420px,calc(100vw-2rem))]",
           bubbleOpen ? "visible translate-y-0 opacity-100" : "pointer-events-none invisible translate-y-3 opacity-0",
         )}

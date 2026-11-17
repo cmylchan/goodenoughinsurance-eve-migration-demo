@@ -11,9 +11,9 @@ import {
   type Activity,
 } from "eve/events";
 import type { UseEveAgentReturn } from "eve/react";
-import { AlertCircleIcon, BrainIcon, Loader2Icon, SquareIcon } from "lucide-react";
+import { AlertCircleIcon, BrainIcon, ClockIcon, Loader2Icon, SquareIcon, XIcon } from "lucide-react";
 import { usePathname } from "next/navigation";
-import { Suspense, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import {
   Conversation,
   ConversationContent,
@@ -31,6 +31,7 @@ import {
 import { Trace, TraceIcon, TraceLine, TraceTitle } from "@/components/ui/trace";
 import { cn } from "@/lib/utils";
 import { AgentMessage } from "./agent-message";
+import { hasOpenApproval } from "./open-approval";
 import { useAssistant, useViewer } from "./assistant-provider";
 import { DEFAULT_AGENT } from "./chat-agents";
 import { pageContext, suggestionsFor, type PageContext } from "./demo-guide";
@@ -132,6 +133,10 @@ export function EveChatBody({
   readonly intro: ChatIntro;
 }) {
   const [cancellationError, setCancellationError] = useState<string>();
+  // Messages typed while an approval is open. eve would treat one as steering and withdraw the
+  // approval, so the supervisor's request would vanish and the call read as refused. They wait
+  // here instead and are sent, in order, once the approval is decided and the turn has finished.
+  const [queued, setQueued] = useState<readonly string[]>([]);
   const [hasInputText, setHasInputText] = useState(false);
   const compact = variant === "panel";
 
@@ -149,8 +154,21 @@ export function EveChatBody({
     now.kind !== "waiting-on-interaction" &&
     (lastMessage?.role !== "assistant" || isPendingAssistantShell);
   const failed = isBusy || isResuming ? undefined : failure(agent.view, turns(agent.view).at(-1)?.turnId);
-  const turnFailure =
-    failed?.code === "MODEL_CALL_FAILED" ? "The model is temporarily unavailable. Please try again." : failed?.message;
+  const approvalOpen = hasOpenApproval(agent.view);
+  // A provider's content filter ends the whole turn, and eve drops that message from the history,
+  // so a harmless question sent with a blocked one goes unanswered too. Say so, and offer a resend.
+  const refused = failed?.code === "MODEL_CALL_FAILED" && /filtered this response|refused this request/i.test(failed.message);
+  const turnFailure = refused
+    ? "The model provider's content filter blocked the reply, so nothing in that message was answered and nothing was written. " +
+      "If it asked for several things, send them one at a time, or try again."
+    : failed?.code === "MODEL_CALL_FAILED"
+      ? "The model is temporarily unavailable. Please try again."
+      : failed?.message;
+  const lastAsked = lastUserText(agent.messages);
+  const retry =
+    failed?.code === "MODEL_CALL_FAILED" && lastAsked !== undefined && cancellationError === undefined && agent.error === undefined
+      ? () => void ask(lastAsked)
+      : undefined;
   const errorMessage = cancellationError ?? agent.error?.message ?? turnFailure;
   // A session that ended outside eve never settles its requests, so they stay open, yet it
   // accepts no answer. Once the server says so, stop offering them.
@@ -169,11 +187,25 @@ export function EveChatBody({
     });
   };
 
+  // Send what waited once nothing is open: the approval decided and the agent done answering it.
+  const readyForQueued = queued.length > 0 && !approvalOpen && !turnOpen && !isBusy && !isResuming;
+  useEffect(() => {
+    if (!readyForQueued) return;
+    const text = queued.join("\n\n");
+    setQueued([]);
+    void ask(text);
+  }, [readyForQueued, queued, ask]);
+
   const handleSubmit = async (message: PromptInputMessage) => {
     const text = message.text.trim();
     if ((text.length === 0 && message.files.length === 0) || isResuming) return;
     setHasInputText(false);
     setCancellationError(undefined);
+
+    if (approvalOpen && message.files.length === 0) {
+      setQueued((list) => [...list, text]);
+      return;
+    }
 
     if (message.files.length === 0) {
       await ask(text);
@@ -225,7 +257,16 @@ export function EveChatBody({
               ),
             )}
             {showPendingThinking ? <PendingActivity activity={now} /> : null}
-            {errorMessage ? <ErrorMessage message={errorMessage} /> : null}
+            {queued.map((text, index) => (
+              <QueuedMessage
+                key={`${index}:${text}`}
+                onRemove={() => setQueued((list) => list.filter((_, at) => at !== index))}
+                text={text}
+              />
+            ))}
+            {errorMessage ? (
+              <ErrorMessage message={errorMessage} onRetry={retry} title={refused ? "Reply blocked" : undefined} />
+            ) : null}
           </ConversationContent>
           <ConversationScrollButton />
         </Conversation>
@@ -241,7 +282,7 @@ export function EveChatBody({
             className={compact ? "min-h-12" : undefined}
             disabled={isResuming}
             onChange={(event) => setHasInputText(event.currentTarget.value.trim().length > 0)}
-            placeholder={intro.placeholder}
+            placeholder={approvalOpen ? "Waiting on an approval. Messages you send now go once it's decided." : intro.placeholder}
           />
           <ComposerAction
             canCancel={turnOpen}
@@ -336,7 +377,48 @@ function ComposerAction({
   );
 }
 
-export function ErrorMessage({ message }: { readonly message: string }) {
+/** A message held until the open approval is decided, so it can't withdraw that approval. */
+function QueuedMessage({ text, onRemove }: { readonly text: string; readonly onRemove: () => void }) {
+  return (
+    <Message from="user">
+      <MessageContent className="opacity-70">
+        <p className="whitespace-pre-wrap">{text}</p>
+        <p className="mt-1 flex items-center gap-1.5 text-muted-foreground text-xs">
+          <ClockIcon className="size-3" />
+          Queued: sends once the approval is decided
+          <button
+            aria-label="Remove queued message"
+            className="ml-1 rounded p-0.5 hover:bg-muted"
+            onClick={onRemove}
+            type="button"
+          >
+            <XIcon className="size-3" />
+          </button>
+        </p>
+      </MessageContent>
+    </Message>
+  );
+}
+
+/** The text of the user's latest message, to send again after a failed turn. */
+function lastUserText(messages: UseEveAgentReturn["messages"]): string | undefined {
+  const last = [...messages].reverse().find((message) => message.role === "user");
+  const text = last?.parts
+    .flatMap((part) => (part.type === "text" ? [part.text] : []))
+    .join("\n")
+    .trim();
+  return text ? text : undefined;
+}
+
+export function ErrorMessage({
+  message,
+  title = "Request failed",
+  onRetry,
+}: {
+  readonly message: string;
+  readonly title?: string;
+  readonly onRetry?: () => void;
+}) {
   return (
     <Message className="max-w-full" from="assistant">
       <MessageContent>
@@ -346,8 +428,17 @@ export function ErrorMessage({ message }: { readonly message: string }) {
         >
           <AlertCircleIcon className="mt-0.5 size-4 shrink-0 text-destructive" />
           <div>
-            <p className="font-medium">Request failed</p>
+            <p className="font-medium">{title}</p>
             <p className="mt-0.5 text-muted-foreground">{message}</p>
+            {onRetry ? (
+              <button
+                className="mt-2 rounded-md border bg-background px-2.5 py-1 font-medium text-xs transition-colors hover:bg-muted"
+                onClick={onRetry}
+                type="button"
+              >
+                Try again
+              </button>
+            ) : null}
           </div>
         </div>
       </MessageContent>

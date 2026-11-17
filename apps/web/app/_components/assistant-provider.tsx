@@ -34,6 +34,7 @@ import {
 import { WEB_CHAT_AGENT } from "@/app/eve-agent";
 import type { AgentStore } from "./agent-host";
 import { CHAT_AGENTS, DEFAULT_AGENT } from "./chat-agents";
+import { hasOpenApproval } from "./open-approval";
 import type { Viewer } from "@/lib/session";
 
 import { ASSISTANT_PATH } from "./paths";
@@ -171,6 +172,9 @@ export function AssistantProvider({
         setBubbleAgent(DEFAULT_AGENT);
         setBubbleOpen(true);
       }
+      // A message now would withdraw the open approval undecided. The chat shows the approval and
+      // its composer holds messages until it is decided; the ask buttons are disabled meanwhile.
+      if (hasOpenApproval(current.view)) return;
       // A turn waiting on a person is still open: a new message steers it rather than queueing.
       const options = activeTurn(current.view) !== undefined ? { turnPolicy: "steer" as const } : undefined;
       await current.send(message, options);

@@ -1,6 +1,6 @@
 import { getVercelOidcToken } from "@vercel/oidc";
 import { AGENT_IDS } from "@ge/eval-cases";
-import { runScoreboard, type AgentScore } from "@ge/eval-cases/scoreboard";
+import type { AgentScore } from "@ge/eval-cases/scoreboard";
 import { defineWorkflowTool } from "eve/tools";
 import { z } from "zod";
 
@@ -26,6 +26,9 @@ function allowed(url: string): boolean {
 
 async function scoreAgent(url: string, agent: string): Promise<{ testEnvironment: boolean; score: AgentScore }> {
   "use step";
+  // Loaded here, not at the top of the file: the scoreboard brings both agent drivers and every
+  // case, and only the baseline and preview steps use it, so it stays off the advisor's cold start.
+  const { runScoreboard } = await import("@ge/eval-cases/scoreboard");
   // A protected preview accepts this deployment's OIDC token through the project's Trusted Sources rule.
   const token = await getVercelOidcToken().catch(() => undefined);
   const board = await runScoreboard({
