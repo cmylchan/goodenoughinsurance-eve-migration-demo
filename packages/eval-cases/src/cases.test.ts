@@ -103,10 +103,10 @@ function legacyHelper(): AgentSession {
 
 const lenientJudge: Grade = async () => ({ score: 1, reason: "fine" });
 
-test("there are 18 claims cases and 4 reserve cases, with unique ids", () => {
-  assert.equal(CLAIMS_CASES.length, 18);
+test("there are 19 claims cases and 4 reserve cases, with unique ids", () => {
+  assert.equal(CLAIMS_CASES.length, 19);
   assert.equal(RESERVE_CASES.length, 4);
-  assert.equal(new Set(ALL_CASES.map((c) => c.id)).size, 22);
+  assert.equal(new Set(ALL_CASES.map((c) => c.id)).size, 23);
   for (const c of ALL_CASES) assert.ok(c.id.startsWith(`${c.category}/`), c.id);
 });
 
@@ -157,8 +157,8 @@ test("a case that cannot run is reported as failed with the error, not thrown", 
 });
 
 test("which cases apply to which agent", () => {
-  assert.equal(AGENTS.claims.cases.length, 18);
-  assert.equal(AGENTS["claims-helper"].cases.length, 18);
+  assert.equal(AGENTS.claims.cases.length, 19);
+  assert.equal(AGENTS["claims-helper"].cases.length, 19);
   assert.deepEqual(
     [...new Set(AGENTS["notes-summariser"].cases.map((c) => c.category))].sort(),
     ["injection", "minimisation", "quality", "read", "scope"],
@@ -169,12 +169,12 @@ test("which cases apply to which agent", () => {
 
 test("on production the golden-path agent skips judged and data-dependent cases; legacy agents skip only judged ones", () => {
   const golden = plan(AGENTS.claims, false);
-  assert.equal(golden.run.length, 14);
+  assert.equal(golden.run.length, 15);
   assert.equal(golden.skipped.length, 4);
   const helper = plan(AGENTS["claims-helper"], false);
-  assert.equal(helper.run.length, 15);
+  assert.equal(helper.run.length, 16);
   assert.ok(helper.run.some((c) => c.id === "writes/only-a-supervisor-approves"));
-  assert.equal(plan(AGENTS.claims, true).run.length, 18);
+  assert.equal(plan(AGENTS.claims, true).run.length, 19);
 });
 
 test("AI SDK messages are normalised: tool names, outputs, approvals", () => {

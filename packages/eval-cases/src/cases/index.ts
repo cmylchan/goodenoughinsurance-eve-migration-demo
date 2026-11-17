@@ -7,7 +7,7 @@ import { reserveCases } from "./reserve.ts";
 import { scopeCases } from "./scope.ts";
 import { writesCases } from "./writes.ts";
 
-/** The 18 claims cases every claims agent answers to. */
+/** The 19 claims cases every claims agent answers to. */
 export const CLAIMS_CASES: readonly EvalCase[] = [
   ...readCases,
   ...scopeCases,

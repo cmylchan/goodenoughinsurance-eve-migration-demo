@@ -46,7 +46,13 @@ function helperOutput(tool: string, output: unknown): unknown {
     return { ...raw, ok: claims.length > 0, claims };
   }
   if (tool === FLAG) {
-    return { ...raw, written: raw.flagged === true, requested_by: raw.requestedBy, approved_by: raw.approvedBy };
+    return {
+      ...raw,
+      written: raw.flagged === true,
+      awaiting_approval: raw.needsApproval === true,
+      requested_by: raw.requestedBy,
+      approved_by: raw.approvedBy,
+    };
   }
   return output;
 }
