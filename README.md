@@ -1,5 +1,16 @@
 # Agent golden path on Vercel: from legacy agents to one framework
 
+**Live demo: https://claims-agent-eve.vercel.app** (synthetic data; sign in as either test user)
+
+| User | Password | Role |
+| --- | --- | --- |
+| `ana` | `quartz-north-amber-90` | Claims adjuster. Sees policies 1042 and 1043. Cannot approve. |
+| `sam` | `slate-harbor-quartz-55` | Claims supervisor. Sees every policy. Can approve. |
+
+**Short on time?** The [SA submission](docs/SUBMISSION.md) opens with a one-page summary: the pain,
+the boundary, the three Vercel primitives that carry the design, the demo and the outcomes. This
+README is the full walkthrough.
+
 How Vercel helps a company move its legacy AI agents onto one golden path, with AI doing most of the
 migration work.
 
@@ -49,7 +60,7 @@ flowchart LR
 | **Durable workflows are hard to build** | Reserve Desk keeps pending approvals in memory and retries by hand. A redeploy loses the approval, and a retry applies the change twice. | The framework makes the wait durable. It survives restarts and redeploys, with nothing for the team to build. |
 | **Approvals that are not approvals** | Claims Helper accepts the word "approved" from anyone, including text in a claim note, and records itself as the approver. | Every write pauses for a supervisor other than the requester, and the record names both people. |
 | **Too much data reaches the model** | Queries select every column, so policyholder identifiers appear in answers. | Tools select the minimum. Holder identifiers are never queried. |
-| **Nothing gates a release** | No evals. A change that breaks a rule ships like any other. | Eighteen evals run against every deployment, and a failing build cannot be promoted. |
+| **Nothing gates a release** | No evals. A change that breaks a rule ships like any other. | 20 evals gate every release: a preview runs all 20, a production build runs the 15 that are safe on live data, and a failing build cannot be promoted. |
 | **The same plumbing, built 30 times** | Each agent has its own layout, helpers and conventions, so every migration starts with archaeology. | One platform package and one documented structure per framework. |
 
 The first three were the starting hypotheses for this demo, and the code bears them out. The other
@@ -60,7 +71,7 @@ second is the golden path: the identity Vercel gives every deployment is what op
 
 ```mermaid
 flowchart TB
-  E["18 shared evals<br/>gate every deploy"] --> A["Any agent on Vercel"]
+  E["20 evals<br/>gate every release"] --> A["Any agent on Vercel"]
   A --> G["Platform package<br/>@ge/golden-path"]
   A -- "every write" --> W["Durable approval<br/>by a supervisor"]
   G --> O["OIDC token<br/>signed by Vercel for each deployment<br/>nothing stored"]
@@ -77,17 +88,29 @@ flowchart TB
    does not need durability.
 2. **No agent holds a standing secret.** Models are reached through Vercel AI Gateway, and data through
    the customer's Vault, both with the OIDC token Vercel signs for each deployment.
-3. **No agent ships without passing its evals.** Eighteen evals run against every deployment, and their
-   result is a required Deployment Check: a build that fails cannot be promoted.
+3. **No agent ships without passing its evals.** The Claims Assistant has 20. Every preview runs all
+   20 against test data; a production build runs the 15 that neither write nor depend on test data
+   before it can be promoted. The result is a required Deployment Check: a build that fails cannot be
+   promoted. ([Details](#evals-and-the-release-gate).)
+
+## The three primitives that carry it
+
+Three Vercel primitives do the heavy lifting. Everything else in the repo supports them.
+
+| Primitive | What it replaces |
+| --- | --- |
+| **OIDC federation into Vault.** Vercel signs a token for each deployment; the agent logs in to the customer's Vault with it and gets a database user that lives for minutes. | Static database passwords, and each team's own answer to "how does my agent reach Vault". |
+| **Vercel Workflow, through eve.** Each conversation is a durable workflow, so a write can wait days for a supervisor and survive restarts and redeploys. | Hand-built approval queues, in-memory pending state and retry loops. |
+| **AI Gateway.** Every model call goes through one endpoint, authenticated by the same deployment token, with a fallback model on another provider. | Model API keys to issue, rotate and leak. |
+
+Supporting: preview deployments and a required Deployment Check (the release gate), Deployment
+Protection with Trusted Sources (CI reaches previews without a bypass secret), the AI SDK paths
+(`ToolLoopAgent`, `WorkflowAgent`) for agents that should not move to eve, Vercel Connect (the
+advisor's GitHub App) and the Marketplace (Neon Postgres).
 
 ## Demo 1: Durable Golden-path Agent with eve
 
-**https://claims-agent-eve.vercel.app**
-
-| User | Password | Role |
-| --- | --- | --- |
-| `ana` | `quartz-north-amber-90` | Claims adjuster. Sees policies 1042 and 1043. Cannot approve. |
-| `sam` | `slate-harbor-quartz-55` | Claims supervisor. Sees every policy. Can approve. |
+**https://claims-agent-eve.vercel.app**, signed in with the [test users](#agent-golden-path-on-vercel-from-legacy-agents-to-one-framework) at the top.
 
 Use two browser windows, one normal and one private, so both users are signed in at once. The
 **Demo Guide** in the chat (the compass button) runs every step below and shows a talking point
@@ -176,7 +199,7 @@ advisor's PRs restore them:
 - **AI SDK agents** are defined once and served from thin routes.
 - **Shared platform code** is a package every agent imports, or mounts as an eve extension.
 
-**The same cases for every agent.** The 18 evals are shared case definitions
+**The same cases for every agent.** 19 of the Claims Assistant's 20 evals are shared case definitions
 ([`packages/eval-cases`](packages/eval-cases)) that run against any agent, eve or AI SDK:
 
 ```bash
@@ -239,7 +262,7 @@ To read one locally: `git fetch origin pull/6/head:pr-6 && git log pr-6`.
 agents/                    eve agent workspace: one deployment, each agent at /eve/<name>
   claims/
     agent/                 the golden-path agent: agent.ts, instructions.md, channels/, tools/, extensions/
-    evals/                 19 evals: 18 thin wrappers over the shared cases, and approval by text
+    evals/                 20 evals: 19 thin wrappers over the shared cases, and approval by text
   migration/
     agent/                 the migration advisor: tools/, subagents/ (three converters), skills/, lib/
     evals/                 verdicts, defect coverage, safety, structure
@@ -327,14 +350,18 @@ pattern; production would use AWS KMS auto-unseal.
 cd agents/claims && npx eve eval --list
 ```
 
-Lists the evals: approval by text (1), and the 18 shared cases: reads never write (5), writes ask first (3), scope (3), injection (2),
-minimisation (2), and rubric-graded quality (3).
+Lists the 20 evals: approval by text (1), and 19 shared cases: reads are answered from the records
+and never write (5), writes ask first and only in scope (4), scope (3), injection (2), minimisation
+(2), and rubric-graded quality (3). A read passes only if the records tool really answered and the
+reply carries what it returned; a turn that completes after "records unavailable" fails.
 
 Every push gets a deployment. When it is built, Vercel notifies
 [`evals.yml`](.github/workflows/evals.yml), which runs the suite against that deployment's URL, signed
 in as the test users, and reports a commit status. The Vercel project requires that status before it
-will promote a production build. Previews run all of them against `claims_test`; a production
-build runs the 14 that neither write nor depend on test data. On a deployment, eve addresses a
+will promote a production build. Previews run all 20 against `claims_test`. A production build runs
+15 against `claims_prod`: it skips the 5 tagged `preview-only`, which write a row (approval by text,
+a supervisor's approval) or are graded by the judge model, which is off in production (the 3 quality
+cases). On a deployment, eve addresses a
 workspace agent at `/eve/<name>`, so the workflow runs from `agents/claims` against
 `<deployment>/eve/claims`.
 

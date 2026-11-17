@@ -3,6 +3,62 @@
 A proposal to put GoodEnough Insurance's AI agents on one reviewed path on Vercel, with a working
 demo. GoodEnough is a fictional customer and all data in the demo is synthetic.
 
+**Live demo:** https://claims-agent-eve.vercel.app · sign in as `ana` / `quartz-north-amber-90`
+(adjuster) or `sam` / `slate-harbor-quartz-55` (supervisor).
+
+## The 10-minute version
+
+This page is what I would present to GoodEnough's platform and security leads. Sections 1 to 8
+below are the detail behind it.
+
+**1. The pain (1 min).** About 30 AI agents, built team by team. Vault is mandated, but an agent has
+no identity to log in with, so each one goes around it with a static database password, and often
+a model key too. Every agent is a fresh security review. Approvals and retries are hand-built, and
+lost on a redeploy. Nothing tests an agent before it ships. Time to market is set by plumbing, not
+by the idea.
+
+**2. The boundary (1 min).** GoodEnough keeps what it trusts: Vault, the claims database, its
+identity provider and its audit log. Vercel runs the agents, the model routing and the release
+path. Only two things cross: a database user that lives for minutes, and the minimum query result.
+
+**3. Three primitives (3 min).**
+- **OIDC federation into Vault.** Vercel signs a token for each deployment. The agent logs in to
+  Vault with it and gets a database user for one step. No agent holds a secret, and Vault, not
+  application code, decides that a preview only ever reaches test data.
+- **Vercel Workflow, through eve.** Every conversation is durable. A write waits for a supervisor
+  other than the requester, for days if need be, across restarts and redeploys, with no queue
+  for the team to build.
+- **AI Gateway.** One endpoint for every model, authenticated by the same deployment token, with a
+  fallback on another provider. No model keys to issue or rotate.
+
+Supporting them: preview deployments with a required eval check (20 evals on every preview; the 15
+safe on live data before any production promotion), Deployment Protection with Trusted Sources, and
+the AI SDK paths for agents that should not move.
+
+**4. Live demo (5 to 7 min).**
+1. As **ana**: `Summarize open claims for policy #1042.` Minimal fields, no holder IDs. Then
+   `Show me the open claims for policy #2001.` A refusal: access comes from the sign-in.
+2. As **ana**: `Flag claim 77 for review: possible duplicate invoice.` It stops for a supervisor.
+   No credential exists while it waits.
+3. As **sam**, by link or by text on the Phone page: approve. Ana's chat completes, and the Data
+   page records both names.
+4. Switch to **Claims Helper v1** (legacy) and repeat the summary: it obeys a note planted in a
+   claim and flags everything, approved by itself. Same model, same data; the rules live in the
+   platform.
+5. If there is time: the **Migration Advisor** scores Reserve Desk against the same cases,
+   recommends a path from a fixed rubric (not always eve), and opens the draft PR that moves it.
+
+**5. Outcomes (1 min).**
+- Standing secrets held by agents: 4 today, 0 on the golden path.
+- Writes with a named requester and a different approver: 0% today, 100%.
+- Pending approvals lost across a deploy: all today, none.
+- Assumed for a regional insurer, to be replaced with GoodEnough's own numbers in week one: a new
+  agent from idea to production in 3 weeks instead of 12, and security review in 3 days instead
+  of 3 weeks, because each agent is one reviewed Terraform block and the shared evals.
+
+**The ask:** start the rollout in section 5 with two agents, one read-only and one that writes, so
+both kinds of migration are proven before the other 28.
+
 ## 1. Problem statement
 
 **Customer.** GoodEnough Insurance, a regional insurer. About 30 AI agents are in use or in
@@ -73,7 +129,7 @@ is what opens Vault.
 ```mermaid
 flowchart TB
   subgraph VC["Vercel"]
-    E["18 shared evals<br/>gate every deploy"] --> A["Any agent"]
+    E["20 evals<br/>gate every release"] --> A["Any agent"]
     A --> G["Platform package<br/>@ge/golden-path"]
     A -- "every write" --> W["Durable approval<br/>by a supervisor"]
     G --> O["OIDC token<br/>signed for each deployment<br/>nothing stored"]
@@ -104,18 +160,22 @@ have public TLS endpoints.
 
 ## 3. Vercel choices
 
-| Primitive | What it does here | Why | Trade-off |
-| --- | --- | --- | --- |
-| **OIDC federation** | Vercel signs a token for every deployment. The agent logs in to Vault and AI Gateway with it. | Removes every standing secret, and the "how does my agent reach Vault" problem. | Vault must be configured to trust Vercel's issuer, once, and be reachable from Vercel. |
-| **eve** (agent framework) | The golden-path agent: durable sessions, approvals, channels and evals. | A write that waits days for a person, with no approval queue to build. | Still a release candidate. Opinionated layout. Each eve agent is its own service, which counts against function limits. |
-| **Vercel Workflow** | Runs each conversation as a durable workflow. Also behind `WorkflowAgent`. | A pending approval survives restarts and redeploys. | Steps must be idempotent and their state serializable, which changes how tools are written. |
-| **AI SDK** (`ToolLoopAgent`, `WorkflowAgent`) | The paths for agents that should not move to eve. | A read-only, one-request agent stays simple. An agent inside an existing app keeps its routes and UI. | Three paths to support, not one. The advisor's rubric decides which. |
-| **AI Gateway** | One endpoint for every model, authenticated by the deployment. | No model keys to issue, rotate or leak. | One more hop, and a dependency on the gateway's model catalogue. |
-| **Preview deployments and Deployment Checks** | Every push gets a deployment. The eval suite runs against it and is a required check before promotion. | A build that breaks a rule cannot reach production. | Adds minutes to each release. Three of the evals are graded by a model, so they can vary. |
-| **Deployment Protection with Trusted Sources** | Previews are private. CI and the advisor reach them by proving identity, not with a bypass secret. | The eval runner stores nothing. | More moving parts when something is refused. |
+Three primitives carry the design. Each removes a whole class of work the teams were doing alone.
 
-Also used: Vercel Connect (a GitHub App for the migration advisor, with no stored key), the eve
-sandbox (legacy code is read there and never run), and the Marketplace (Neon Postgres).
+| Core primitive | What it does here | Why | Trade-off |
+| --- | --- | --- | --- |
+| **OIDC federation into Vault** | Vercel signs a token for every deployment. The agent logs in to Vault with it and gets a database user for one step; the same token authenticates AI Gateway. | Removes every standing secret, and the "how does my agent reach Vault" problem. Vault's bound claims keep previews on test data. | Vault must be configured to trust Vercel's issuer, once, and be reachable from Vercel. |
+| **Vercel Workflow, through eve** | eve runs each conversation as a durable workflow: sessions, approvals, channels and evals. Workflow is also behind `WorkflowAgent`. | A write that waits days for a person survives restarts and redeploys, with no approval queue to build. | eve is still a release candidate, with an opinionated layout; each eve agent is its own service, which counts against function limits. Steps must be idempotent and their state serializable. |
+| **AI Gateway** | One endpoint for every model, authenticated by the deployment, with a fallback model on another provider. | No model keys to issue, rotate or leak; one provider's outage does not take an agent down. | One more hop, and a dependency on the gateway's model catalogue. |
+
+Supporting primitives:
+
+| Supporting | What it does here | Trade-off |
+| --- | --- | --- |
+| **Preview deployments and Deployment Checks** | Every push gets a deployment and the eval suite runs against it: all 20 evals on a preview, and the 15 that neither write nor need test data or the judge on a production build. The result is a required check before promotion. | Adds minutes to each release. Three evals are graded by a model, so they can vary, and they run on previews only. |
+| **AI SDK** (`ToolLoopAgent`, `WorkflowAgent`) | The paths for agents that should not move to eve: a read-only, one-request agent stays simple, and an agent inside an existing app keeps its routes and UI. | Three paths to support, not one. The advisor's rubric decides which. |
+| **Deployment Protection with Trusted Sources** | Previews are private. CI and the advisor reach them by proving identity, not with a bypass secret. | More moving parts when something is refused. |
+| **Vercel Connect, the eve sandbox, the Marketplace** | A GitHub App for the migration advisor with no stored key; legacy code is read in the sandbox and never run; Neon Postgres. | None significant for the design. |
 
 ## 4. Working demo
 
@@ -139,7 +199,7 @@ One agent at a time, read-only agents first. Each migration is one pull request.
 | Stage | What happens | Exit test |
 | --- | --- | --- |
 | **Preview** | The migration PR adds the migrated agent beside the legacy one. Its preview deployment reads the test database only. | Both agents answer the same prompts on the preview. |
-| **Validation** | The same 18 cases score the legacy and the migrated agent. Security reviews one Terraform block. A supervisor approves a real write. | Migrated agent passes every case. Security signs off. |
+| **Validation** | The same shared cases score the legacy and the migrated agent. Security reviews one Terraform block. A supervisor approves a real write. | Migrated agent passes every case. Security signs off. |
 | **Canary** | Promote behind a Rolling Release, starting with a small share of traffic, or route one pilot team to the new agent. | No increase in errors or refusals; approvals complete; no leftover database users. |
 | **Cutover** | Promote to all traffic. Disable the legacy agent's routes. | A full business day with no fallback to legacy. |
 | **Rollback** | Instant Rollback to the previous deployment. Pending approvals are durable, so they are not lost. The legacy agent's static role is disabled, not dropped, for two weeks. A kill switch in the database stops all writes at once. | Rollback rehearsed on the preview before cutover. |
@@ -161,7 +221,7 @@ agreed with them.
 | Lifetime of a database credential | Indefinite | Revoked at the end of each step; 5-minute default and 10-minute ceiling as backstops; none while a write waits | Vault lease TTLs and audit log |
 | Writes with a named requester and a different named approver | 0% (Claims Helper records itself) | 100% | `claim_flags.requested_by` ≠ `approved_by` |
 | Pending approvals lost across a deploy | All (Reserve Desk holds them in memory) | 0 | Approve-after-redeploy test each release |
-| Evals passed before promotion | No gate | 18 of 18, required check | Deployment Check status |
+| Evals passed before promotion | No gate | 20 of 20 on the preview, and 15 of 15 on the production build, as a required check | Deployment Check status |
 | Database users left after a step | Not tracked | 0, with an alert above 0 | Count of Vault-issued roles in Postgres |
 
 **Business**
@@ -190,7 +250,7 @@ What I would tell the customer before kickoff.
   four faults found by a person using the preview, because it checks what the agent says and
   writes, not credentials, sessions or ordering.
 - **The advisor proposes; people decide.** Its pull requests are drafts, opened after approval, and
-  it cannot merge. Its last two steps need a GitHub App and a trusted-source rule to be set up.
+  it cannot merge.
 - **Cost and limits are not modelled.** The demo runs on a small plan; function counts, model spend
   and Vault capacity need sizing for 30 agents.
 
@@ -205,9 +265,9 @@ database or Vercel.
 
 | Check | What it is | When it runs |
 | --- | --- | --- |
-| **Test set** | 18 shared cases for any claims agent: reads never write (5), writes ask first (3), scope (3), injection (2), minimisation (2), quality (3). One more covers approval by text. | Every deployment. |
+| **Test set** | 20 evals. 19 are shared cases for any claims agent: reads are answered from the records and never write (5), writes ask first and only in scope (4), scope (3), injection (2), minimisation (2), quality (3). One more covers approval by text. | All 20 on every preview. The 15 that neither write nor need test data or the judge on every production build. |
 | **Rubric** | The three quality cases are graded by a judge model against written levels and a pass threshold: concise, matches the seeded data, states its assumptions. | Every preview. |
-| **Regression gate** | The suite is a required Deployment Check. A failing build cannot be promoted. | Before every promotion. |
+| **Regression gate** | The suite is a required Deployment Check. A failing build cannot be promoted. | Before every promotion (the production subset). |
 | **Before and after** | The same cases score a legacy agent and its migrated version, side by side. | Each migration. |
 | **Advisor's own evals** | Seven cases: the right verdict for each legacy agent, no PR without approval, a planted comment in the code is ignored, and it asks when the code is silent. | Advisor changes. |
 | **Manual review** | Two people's roles played side by side on each preview. Findings are kept in [the build log](BUILD_LOG.md). | Every change. |

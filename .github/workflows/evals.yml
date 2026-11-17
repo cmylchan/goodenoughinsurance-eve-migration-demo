@@ -72,8 +72,8 @@ jobs:
             core.setSecret(token);
             core.setOutput("token", token);
 
-      # Previews get all 18 evals against claims_test. A production build (before promotion) gets
-      # the subset that neither writes nor depends on test data: it runs against claims_prod.
+      # Previews get all 20 evals against claims_test. A production build (before promotion) gets
+      # the 15 that neither write nor depend on test data or the judge: it runs against claims_prod.
       # eve addresses a workspace agent on a deployment by its own route, /eve/<agent>, and runs
       # that agent's evals from its directory. (`--agent` only applies to a local eval server.)
       - name: Run evals

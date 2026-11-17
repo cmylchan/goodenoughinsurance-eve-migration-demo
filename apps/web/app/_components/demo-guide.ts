@@ -264,7 +264,7 @@ export function guideChapters(canApprove: boolean): readonly GuideChapter[] {
         },
         {
           id: "advisor-baseline",
-          say: "The same eighteen cases grade every agent, old or new, so the scores are comparable.",
+          say: "The same shared cases grade every agent, old or new, so the scores are comparable.",
           title: "3. Baseline",
           detail: "It scores Reserve Desk and the Claims Assistant on the same cases and names each failure in plain words. This takes a few minutes.",
         },

@@ -21,7 +21,7 @@ const RULES = [
   {
     icon: FlaskConicalIcon,
     title: "Evals gate every deploy",
-    body: "Eighteen evals run against each deployment. Their result is a required Deployment Check, so a failing build can't be promoted.",
+    body: "20 evals gate every release: a preview runs all 20, and a production build runs the 15 safe on live data. The result is a required Deployment Check, so a failing build can't be promoted.",
   },
 ] as const;
 
