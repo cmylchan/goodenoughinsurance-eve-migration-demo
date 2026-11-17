@@ -155,8 +155,20 @@ export function EveChatBody({
     (lastMessage?.role !== "assistant" || isPendingAssistantShell);
   const failed = isBusy || isResuming ? undefined : failure(agent.view, turns(agent.view).at(-1)?.turnId);
   const approvalOpen = hasOpenApproval(agent.view);
-  const turnFailure =
-    failed?.code === "MODEL_CALL_FAILED" ? "The model is temporarily unavailable. Please try again." : failed?.message;
+  // A provider's content filter ends the whole turn, and eve drops that message from the history,
+  // so a harmless question sent with a blocked one goes unanswered too. Say so, and offer a resend.
+  const refused = failed?.code === "MODEL_CALL_FAILED" && /filtered this response|refused this request/i.test(failed.message);
+  const turnFailure = refused
+    ? "The model provider's content filter blocked the reply, so nothing in that message was answered and nothing was written. " +
+      "If it asked for several things, send them one at a time, or try again."
+    : failed?.code === "MODEL_CALL_FAILED"
+      ? "The model is temporarily unavailable. Please try again."
+      : failed?.message;
+  const lastAsked = lastUserText(agent.messages);
+  const retry =
+    failed?.code === "MODEL_CALL_FAILED" && lastAsked !== undefined && cancellationError === undefined && agent.error === undefined
+      ? () => void ask(lastAsked)
+      : undefined;
   const errorMessage = cancellationError ?? agent.error?.message ?? turnFailure;
   // A session that ended outside eve never settles its requests, so they stay open, yet it
   // accepts no answer. Once the server says so, stop offering them.
@@ -252,7 +264,9 @@ export function EveChatBody({
                 text={text}
               />
             ))}
-            {errorMessage ? <ErrorMessage message={errorMessage} /> : null}
+            {errorMessage ? (
+              <ErrorMessage message={errorMessage} onRetry={retry} title={refused ? "Reply blocked" : undefined} />
+            ) : null}
           </ConversationContent>
           <ConversationScrollButton />
         </Conversation>
@@ -386,7 +400,25 @@ function QueuedMessage({ text, onRemove }: { readonly text: string; readonly onR
   );
 }
 
-export function ErrorMessage({ message }: { readonly message: string }) {
+/** The text of the user's latest message, to send again after a failed turn. */
+function lastUserText(messages: UseEveAgentReturn["messages"]): string | undefined {
+  const last = [...messages].reverse().find((message) => message.role === "user");
+  const text = last?.parts
+    .flatMap((part) => (part.type === "text" ? [part.text] : []))
+    .join("\n")
+    .trim();
+  return text ? text : undefined;
+}
+
+export function ErrorMessage({
+  message,
+  title = "Request failed",
+  onRetry,
+}: {
+  readonly message: string;
+  readonly title?: string;
+  readonly onRetry?: () => void;
+}) {
   return (
     <Message className="max-w-full" from="assistant">
       <MessageContent>
@@ -396,8 +428,17 @@ export function ErrorMessage({ message }: { readonly message: string }) {
         >
           <AlertCircleIcon className="mt-0.5 size-4 shrink-0 text-destructive" />
           <div>
-            <p className="font-medium">Request failed</p>
+            <p className="font-medium">{title}</p>
             <p className="mt-0.5 text-muted-foreground">{message}</p>
+            {onRetry ? (
+              <button
+                className="mt-2 rounded-md border bg-background px-2.5 py-1 font-medium text-xs transition-colors hover:bg-muted"
+                onClick={onRetry}
+                type="button"
+              >
+                Try again
+              </button>
+            ) : null}
           </div>
         </div>
       </MessageContent>

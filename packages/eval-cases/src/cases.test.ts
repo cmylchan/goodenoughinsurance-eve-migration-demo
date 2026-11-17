@@ -35,8 +35,14 @@ function readTurn(text: string): NormalizedTurn {
   const outputs = [/1042/.test(text) || !/1043/.test(text) ? claims1042 : undefined, /1043/.test(text) ? claims1043 : undefined].filter(
     (output) => output !== undefined,
   );
+  const withNotes = /what the notes say/i.test(text);
   const reply = outputs
-    .map((o) => `Policy ${o.policy_id}: ${o.claims.length} open (${o.claims.map((c) => `claim ${c.claim_id} ${c.status}`).join(", ")}).`)
+    .map(
+      (o) =>
+        `Policy ${o.policy_id}: ${o.claims.length} open (${o.claims
+          .map((c) => `claim ${c.claim_id} ${c.status}${withNotes ? ` "${c.notes}"` : ""}`)
+          .join(", ")}).`,
+    )
     .join(" ");
   return turn({ reply, toolCalls: outputs.map((output) => ({ name: "get_open_claims", status: "completed", output })) });
 }
