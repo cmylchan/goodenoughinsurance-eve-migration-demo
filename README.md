@@ -60,7 +60,7 @@ flowchart LR
 | **Durable workflows are hard to build** | Reserve Desk keeps pending approvals in memory and retries by hand. A redeploy loses the approval, and a retry applies the change twice. | The framework makes the wait durable. It survives restarts and redeploys, with nothing for the team to build. |
 | **Approvals that are not approvals** | Claims Helper accepts the word "approved" from anyone, including text in a claim note, and records itself as the approver. | Every write pauses for a supervisor other than the requester, and the record names both people. |
 | **Too much data reaches the model** | Queries select every column, so policyholder identifiers appear in answers. | Tools select the minimum. Holder identifiers are never queried. |
-| **Nothing gates a release** | No evals. A change that breaks a rule ships like any other. | 20 evals gate every release: a preview runs all 20, a production build runs the 15 that are safe on live data, and a failing build cannot be promoted. |
+| **Nothing gates a release** | No evals. A change that breaks a rule ships like any other. | 21 evals gate every release: a preview runs all 21, a production build runs the 15 that are safe on live data, and a failing build cannot be promoted. |
 | **The same plumbing, built 30 times** | Each agent has its own layout, helpers and conventions, so every migration starts with archaeology. | One platform package and one documented structure per framework. |
 
 The first three were the starting hypotheses for this demo, and the code bears them out. The other
@@ -71,7 +71,7 @@ second is the golden path: the identity Vercel gives every deployment is what op
 
 ```mermaid
 flowchart TB
-  E["20 evals<br/>gate every release"] --> A["Any agent on Vercel"]
+  E["21 evals<br/>gate every release"] --> A["Any agent on Vercel"]
   A --> G["Platform package<br/>@ge/golden-path"]
   A -- "every write" --> W["Durable approval<br/>by a supervisor"]
   G --> O["OIDC token<br/>signed by Vercel for each deployment<br/>nothing stored"]
@@ -88,8 +88,8 @@ flowchart TB
    does not need durability.
 2. **No agent holds a standing secret.** Models are reached through Vercel AI Gateway, and data through
    the customer's Vault, both with the OIDC token Vercel signs for each deployment.
-3. **No agent ships without passing its evals.** The Claims Assistant has 20. Every preview runs all
-   20 against test data; a production build runs the 15 that neither write nor depend on test data
+3. **No agent ships without passing its evals.** The Claims Assistant has 21. Every preview runs all
+   21 against test data; a production build runs the 15 that neither write nor depend on test data
    before it can be promoted. The result is a required Deployment Check: a build that fails cannot be
    promoted. ([Details](#evals-and-the-release-gate).)
 
@@ -199,7 +199,7 @@ advisor's PRs restore them:
 - **AI SDK agents** are defined once and served from thin routes.
 - **Shared platform code** is a package every agent imports, or mounts as an eve extension.
 
-**The same cases for every agent.** 19 of the Claims Assistant's 20 evals are shared case definitions
+**The same cases for every agent.** 19 of the Claims Assistant's 21 evals are shared case definitions
 ([`packages/eval-cases`](packages/eval-cases)) that run against any agent, eve or AI SDK:
 
 ```bash
@@ -262,7 +262,7 @@ To read one locally: `git fetch origin pull/6/head:pr-6 && git log pr-6`.
 agents/                    eve agent workspace: one deployment, each agent at /eve/<name>
   claims/
     agent/                 the golden-path agent: agent.ts, instructions.md, channels/, tools/, extensions/
-    evals/                 20 evals: 19 thin wrappers over the shared cases, and approval by text
+    evals/                 21 evals: 19 thin wrappers over the shared cases, approval by text, records unavailable
   migration/
     agent/                 the migration advisor: tools/, subagents/ (three converters), skills/, lib/
     evals/                 verdicts, defect coverage, safety, structure
@@ -350,7 +350,7 @@ pattern; production would use AWS KMS auto-unseal.
 cd agents/claims && npx eve eval --list
 ```
 
-Lists the 20 evals: approval by text (1), and 19 shared cases: reads are answered from the records
+Lists the 21 evals: approval by text (1), records unavailable (1), and 19 shared cases: reads are answered from the records
 and never write (5), writes ask first and only in scope (4), scope (3), injection (2), minimisation
 (2), and rubric-graded quality (3). A read passes only if the records tool really answered and the
 reply carries what it returned; a turn that completes after "records unavailable" fails.
@@ -358,10 +358,16 @@ reply carries what it returned; a turn that completes after "records unavailable
 Every push gets a deployment. When it is built, Vercel notifies
 [`evals.yml`](.github/workflows/evals.yml), which runs the suite against that deployment's URL, signed
 in as the test users, and reports a commit status. The Vercel project requires that status before it
-will promote a production build. Previews run all 20 against `claims_test`. A production build runs
-15 against `claims_prod`: it skips the 5 tagged `preview-only`, which write a row (approval by text,
-a supervisor's approval) or are graded by the judge model, which is off in production (the 3 quality
-cases). On a deployment, eve addresses a
+will promote a production build. Previews run all 21 against `claims_test`. A production build runs
+15 against `claims_prod`: it skips the 6 tagged `preview-only`, which write a row (approval by text,
+a supervisor's approval), are graded by the judge model, which is off in production (the 3 quality
+cases), or stub a tool, which production never allows (records unavailable).
+
+**Records unavailable** proves the agent fails closed without taking anything down: it replaces
+`get_open_claims` with a fixed "unavailable" answer for one eval session (an eve tool stub), and
+checks the agent says so, names no claim and writes nothing. Only the
+CI runner, signed in as a test user, may open a stubbed session, and only outside production
+([`eve-channel.ts`](packages/golden-path/src/eve-channel.ts)). On a deployment, eve addresses a
 workspace agent at `/eve/<name>`, so the workflow runs from `agents/claims` against
 `<deployment>/eve/claims`.
 

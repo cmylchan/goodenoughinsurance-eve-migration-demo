@@ -31,7 +31,7 @@ path. Only two things cross: a database user that lives for minutes, and the min
 - **AI Gateway.** One endpoint for every model, authenticated by the same deployment token, with a
   fallback on another provider. No model keys to issue or rotate.
 
-Supporting them: preview deployments with a required eval check (20 evals on every preview; the 15
+Supporting them: preview deployments with a required eval check (21 evals on every preview; the 15
 safe on live data before any production promotion), Deployment Protection with Trusted Sources, and
 the AI SDK paths for agents that should not move.
 
@@ -129,7 +129,7 @@ is what opens Vault.
 ```mermaid
 flowchart TB
   subgraph VC["Vercel"]
-    E["20 evals<br/>gate every release"] --> A["Any agent"]
+    E["21 evals<br/>gate every release"] --> A["Any agent"]
     A --> G["Platform package<br/>@ge/golden-path"]
     A -- "every write" --> W["Durable approval<br/>by a supervisor"]
     G --> O["OIDC token<br/>signed for each deployment<br/>nothing stored"]
@@ -172,7 +172,7 @@ Supporting primitives:
 
 | Supporting | What it does here | Trade-off |
 | --- | --- | --- |
-| **Preview deployments and Deployment Checks** | Every push gets a deployment and the eval suite runs against it: all 20 evals on a preview, and the 15 that neither write nor need test data or the judge on a production build. The result is a required check before promotion. | Adds minutes to each release. Three evals are graded by a model, so they can vary, and they run on previews only. |
+| **Preview deployments and Deployment Checks** | Every push gets a deployment and the eval suite runs against it: all 21 evals on a preview, and the 15 that neither write, nor need test data or the judge, nor stub a tool on a production build. The result is a required check before promotion. | Adds minutes to each release. Three evals are graded by a model, so they can vary, and they run on previews only. |
 | **AI SDK** (`ToolLoopAgent`, `WorkflowAgent`) | The paths for agents that should not move to eve: a read-only, one-request agent stays simple, and an agent inside an existing app keeps its routes and UI. | Three paths to support, not one. The advisor's rubric decides which. |
 | **Deployment Protection with Trusted Sources** | Previews are private. CI and the advisor reach them by proving identity, not with a bypass secret. | More moving parts when something is refused. |
 | **Vercel Connect, the eve sandbox, the Marketplace** | A GitHub App for the migration advisor with no stored key; legacy code is read in the sandbox and never run; Neon Postgres. | None significant for the design. |
@@ -221,7 +221,7 @@ agreed with them.
 | Lifetime of a database credential | Indefinite | Revoked at the end of each step; 5-minute default and 10-minute ceiling as backstops; none while a write waits | Vault lease TTLs and audit log |
 | Writes with a named requester and a different named approver | 0% (Claims Helper records itself) | 100% | `claim_flags.requested_by` ≠ `approved_by` |
 | Pending approvals lost across a deploy | All (Reserve Desk holds them in memory) | 0 | Approve-after-redeploy test each release |
-| Evals passed before promotion | No gate | 20 of 20 on the preview, and 15 of 15 on the production build, as a required check | Deployment Check status |
+| Evals passed before promotion | No gate | 21 of 21 on the preview, and 15 of 15 on the production build, as a required check | Deployment Check status |
 | Database users left after a step | Not tracked | 0, with an alert above 0 | Count of Vault-issued roles in Postgres |
 
 **Business**
@@ -265,7 +265,7 @@ database or Vercel.
 
 | Check | What it is | When it runs |
 | --- | --- | --- |
-| **Test set** | 20 evals. 19 are shared cases for any claims agent: reads are answered from the records and never write (5), writes ask first and only in scope (4), scope (3), injection (2), minimisation (2), quality (3). One more covers approval by text. | All 20 on every preview. The 15 that neither write nor need test data or the judge on every production build. |
+| **Test set** | 21 evals. 19 are shared cases for any claims agent: reads are answered from the records and never write (5), writes ask first and only in scope (4), scope (3), injection (2), minimisation (2), quality (3). Two more cover approval by text, and failing closed when records are unreachable (the records tool is stubbed for that one session). | All 21 on every preview. The 15 that neither write, nor need test data or the judge, nor stub a tool on every production build. |
 | **Rubric** | The three quality cases are graded by a judge model against written levels and a pass threshold: concise, matches the seeded data, states its assumptions. | Every preview. |
 | **Regression gate** | The suite is a required Deployment Check. A failing build cannot be promoted. | Before every promotion (the production subset). |
 | **Before and after** | The same cases score a legacy agent and its migrated version, side by side. | Each migration. |

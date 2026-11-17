@@ -155,7 +155,7 @@ Moving the agent and moving the helpers into the package are separate commits, s
 reverted on its own.
 
 **Done when:**
-- All 20 evals pass against a preview with `--agent claims`.
+- All 21 evals pass against a preview with `--agent claims`.
 - `lib/vault.test.ts` passes from its new home in the package.
 - An approval link opened as Sam still resolves.
 - The Deployment Check is still required and green.
@@ -200,7 +200,7 @@ against eve and AI SDK agents alike.
 | Reserve Desk (legacy) | scope, plus the 4 reserve cases in Phase 2c |
 
 **Done when:**
-- The 20 eve evals still pass through the wrappers.
+- The 21 eve evals still pass through the wrappers.
 - `runScoreboard` returns results for the eve agent alone (the legacy agents arrive in Phase 2).
 
 ---
@@ -595,7 +595,7 @@ Phase 4 is independent of 1–3 and can be built alongside them.
      - wrap `next.config.ts` with both `withWorkflow` and `withEve`
      - build a trivial WorkflowAgent with one hook-based approval
      - deploy a preview, approve, redeploy mid-wait, check that it resumes
-     - check that the 20 eve evals still pass
+     - check that the 21 eve evals still pass
    - **Spike result, local half (2026-11-12): they coexist.** With `workflow` 5.5.0 and
      `@ai-sdk/workflow` 2.0.103 installed and `next.config.ts` wrapped as
      `withEve(withWorkflow(config), { eveRoot: "../.." })`:
