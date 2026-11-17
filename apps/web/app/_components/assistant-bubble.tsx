@@ -1,22 +1,34 @@
 "use client";
 
 import { interactions } from "eve/events";
-import { CompassIcon, Maximize2Icon, Minimize2Icon, PlusIcon, SquareArrowOutUpRightIcon, XIcon } from "lucide-react";
+import { CompassIcon, Loader2Icon, Maximize2Icon, Minimize2Icon, PlusIcon, SquareArrowOutUpRightIcon, XIcon } from "lucide-react";
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { Suspense, useCallback, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
-import { AssistantChat, migrationIntro } from "./agent-chat";
-import { AiSdkChat } from "./ai-sdk-chat";
 import { AssistantIcon } from "./assistant-icon";
-import { isAssistantPage, useAssistant, useViewer } from "./assistant-provider";
+import { isAssistantPage, useAssistant } from "./assistant-provider";
 import { agentHref, CHAT_AGENTS, chatAgent, DEFAULT_AGENT, GUIDE_AGENT } from "./chat-agents";
 import { pageContext } from "./demo-guide";
-import { EveAgentChat } from "./eve-agent-chat";
-import { GuidePanel } from "./guide-panel";
 import { assignedPolicyIds } from "./policy-actions";
+
+// The chats bring the markdown renderer, the code highlighter and the chat clients with them:
+// most of the site's JavaScript. A page that only shows the launcher doesn't need any of it, so
+// the panel's contents are a separate download, fetched when the browser is idle or the launcher
+// is touched, and mounted the first time the bubble opens.
+const loadPanel = () => import("./assistant-bubble-panel");
+const BubblePanel = dynamic(() => loadPanel().then((module) => module.BubblePanel), { ssr: false, loading: PanelLoading });
+
+function PanelLoading() {
+  return (
+    <div className="flex flex-1 items-center justify-center text-muted-foreground text-sm" role="status">
+      <Loader2Icon className="mr-2 size-4 animate-spin" /> Loading…
+    </div>
+  );
+}
 
 /**
  * The AI assistant, floating in the corner of every page except the full assistant page. It
@@ -24,7 +36,6 @@ import { assignedPolicyIds } from "./policy-actions";
  */
 export function AssistantBubble() {
   const pathname = usePathname();
-  const viewer = useViewer();
   const { agent: claims, bubbleOpen, setBubbleOpen, bubbleAgent, setBubbleAgent, newChat, sessionId } = useAssistant();
   const onAssistantPage = isAssistantPage(pathname);
   // Widened in place so a table in the conversation can show more columns, without leaving the page.
@@ -33,6 +44,20 @@ export function AssistantBubble() {
   const [reset, setReset] = useState(0);
   const [otherSession, setOtherSession] = useState<string>();
   const onSession = useCallback((id: string | undefined) => setOtherSession(id), []);
+  // The panel's contents mount on the first open and then stay, so a draft and the scroll position survive closing.
+  const [opened, setOpened] = useState(false);
+  if (bubbleOpen && !opened) setOpened(true);
+  // Fetch them ahead of the first open once the page has settled, unless the visitor asked to save data.
+  useEffect(() => {
+    if ((navigator as Navigator & { connection?: { saveData?: boolean } }).connection?.saveData) return;
+    if (typeof window.requestIdleCallback === "function") {
+      const idle = window.requestIdleCallback(() => void loadPanel(), { timeout: 4000 });
+      return () => window.cancelIdleCallback(idle);
+    }
+    const timer = window.setTimeout(() => void loadPanel(), 2500);
+    return () => window.clearTimeout(timer);
+  }, []);
+
   // A label slides out beside the launcher a moment after the page settles, says what it is,
   // and tucks itself away again. Hovering or focusing the launcher brings it back.
   const [announcing, setAnnouncing] = useState(false);
@@ -106,7 +131,7 @@ export function AssistantBubble() {
             <Select onValueChange={setBubbleAgent} value={current.id}>
               <SelectTrigger
                 aria-label="Switch agent"
-                className="h-6! w-fit max-w-full gap-1 rounded-full border-border bg-background px-2.5 py-0 font-bold shadow-none hover:border-brand/50 hover:bg-brand-soft"
+                className="h-6! w-fit max-w-full pointer-coarse:h-8! gap-1 rounded-full border-border bg-background px-2.5 py-0 font-bold shadow-none hover:border-brand/50 hover:bg-brand-soft"
                 size="sm"
               >
                 <span className="truncate">{current.label}</span>
@@ -174,31 +199,10 @@ export function AssistantBubble() {
             <XIcon />
           </Button>
         </header>
-        {/* The Claims Assistant stays mounted while closed or switched away, so its scroll position and a draft survive. */}
-        <div className={cn("min-h-0 flex-1 flex-col", isClaims ? "flex" : "hidden")}>
-          <AssistantChat variant="panel" />
-        </div>
-        {current.kind === "guide" ? (
-          <GuidePanel compact />
-        ) : needsPolicies ? (
-          <div className="flex flex-1 items-center justify-center text-muted-foreground text-sm">Loading your policy list…</div>
-        ) : current.kind === "ai-sdk" ? (
-          <AiSdkChat
-            agent={current}
-            compact
-            headers={current.id === "notes-summariser" ? { "x-user-policies": policyIds ?? "" } : undefined}
-            key={`${current.id}:${reset}`}
-          />
-        ) : !isClaims ? (
-          <EveAgentChat
-            agent={current.id}
-            intro={migrationIntro(page, viewer.canApprove)}
-            key={current.id}
-            onSession={onSession}
-            resetSignal={reset}
-            variant="panel"
-            viewerId={viewer.id}
-          />
+        {opened ? (
+          <Suspense fallback={<PanelLoading />}>
+            <BubblePanel current={current} onSession={onSession} page={page} policyIds={policyIds} reset={reset} />
+          </Suspense>
         ) : null}
       </section>
 
@@ -224,8 +228,12 @@ export function AssistantBubble() {
           setAnnouncing(false);
           setBubbleOpen(!bubbleOpen);
         }}
-        onFocus={() => setAnnouncing(true)}
+        onFocus={() => {
+          void loadPanel();
+          setAnnouncing(true);
+        }}
         onMouseEnter={() => setAnnouncing(true)}
+        onPointerEnter={() => void loadPanel()}
         onMouseLeave={() => setAnnouncing(false)}
         type="button"
       >

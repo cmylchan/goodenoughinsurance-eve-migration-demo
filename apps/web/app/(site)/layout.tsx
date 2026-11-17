@@ -19,7 +19,7 @@ export default function SiteLayout({ children }: { readonly children: ReactNode 
   const viewer = requireViewer();
   return (
     <AssistantProvider viewer={viewer}>
-      <div className="flex min-h-dvh flex-col bg-background text-foreground">
+      <div className="flex min-h-dvh flex-col bg-background text-foreground has-[[data-fills-viewport]]:h-dvh">
         <SiteHeader
           account={
             <Suspense fallback={<ViewerChipSkeleton />}>

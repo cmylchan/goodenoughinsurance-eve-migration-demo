@@ -2,7 +2,6 @@
 
 import { cjk } from "@streamdown/cjk";
 import { code } from "@streamdown/code";
-import { math } from "@streamdown/math";
 import { createMermaidPlugin } from "@streamdown/mermaid";
 import { ArrowRightIcon } from "lucide-react";
 import Link from "next/link";
@@ -42,7 +41,6 @@ const PROMPTS = new Map(
 const plugins = {
   cjk,
   code,
-  math,
   mermaid: createMermaidPlugin({
     config: {
       theme: "base",

@@ -12,19 +12,18 @@
 // It is shown while that link is open and is never remembered: leaving the link returns the
 // visitor to their own conversation, so two users' chats stay separate.
 
-import { ClientError, type MessagePart } from "eve/client";
+import type { MessagePart } from "eve/client";
 import { activeTurn } from "eve/events";
-import { useEveAgent, type UseEveAgentReturn } from "eve/react";
+import type { UseEveAgentReturn } from "eve/react";
+import dynamic from "next/dynamic";
 import { usePathname, useRouter } from "next/navigation";
 import {
   createContext,
-  memo,
   Suspense,
   use,
   useCallback,
   useContext,
   useEffect,
-  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -33,12 +32,18 @@ import {
   type RefObject,
 } from "react";
 import { WEB_CHAT_AGENT } from "@/app/eve-agent";
+import type { AgentStore } from "./agent-host";
 import { CHAT_AGENTS, DEFAULT_AGENT } from "./chat-agents";
 import type { Viewer } from "@/lib/session";
 
 import { ASSISTANT_PATH } from "./paths";
 
 export { ASSISTANT_PATH };
+
+// The eve client is by far the largest thing the site-wide provider needs, and nothing on screen
+// depends on it until the conversation opens. Loaded on its own, it stays out of every page's
+// first JavaScript; the conversation connects a moment after the page is interactive.
+const AgentHost = dynamic(() => import("./agent-host").then((module) => module.AgentHost), { ssr: false });
 
 /**
  * `/s/<agent>/<id>` is a conversation link, the one an adjuster sends a supervisor to approve a
@@ -103,7 +108,7 @@ export function useViewer(): Viewer {
 
 // The hook's state lives in a sibling component and is published here, so switching to a
 // different conversation (which needs a fresh hook) never remounts the page underneath.
-function createAgentStore() {
+function createAgentStore(): AgentStore {
   let current: UseEveAgentReturn | undefined;
   const listeners = new Set<() => void>();
   return {
@@ -119,8 +124,6 @@ function createAgentStore() {
     },
   };
 }
-
-type AgentStore = ReturnType<typeof createAgentStore>;
 
 interface Slot {
   /** Bumped to remount the hook on another existing conversation. */
@@ -358,54 +361,7 @@ function ConversationSlot({
   ) : null;
 }
 
-/**
- * Owns the one eve hook. Renders nothing; publishes the hook's state to the store. Memoized so
- * that only the hook's own updates re-render it: a re-render from the provider (which itself
- * re-renders on every publish) would otherwise publish again, forever.
- */
-const AgentHost = memo(function AgentHost({
-  sessionId,
-  remembered,
-  store,
-  onSessionChange,
-  onStale,
-}: {
-  readonly sessionId: string | undefined;
-  readonly remembered: boolean;
-  readonly store: AgentStore;
-  readonly onSessionChange: (sessionId: string | undefined) => void;
-  readonly onStale: () => void;
-}) {
-  const reportedStale = useRef(false);
-  const agent = useEveAgent({
-    agent: WEB_CHAT_AGENT,
-    initialSession: sessionId === undefined ? undefined : { sessionId, streamIndex: 0 },
-    resume: sessionId !== undefined,
-    onSessionChange(session) {
-      if (session !== undefined) onSessionChange(session.sessionId);
-    },
-  });
-
-  useLayoutEffect(() => {
-    store.set(agent);
-  });
-  useEffect(() => () => store.set(undefined), [store]);
-
-  const error = agent.error;
-  useEffect(() => {
-    if (!remembered || reportedStale.current || !(error instanceof ClientError)) return;
-    if (STALE_CODES.has(error.code) || (error.code === "http_error" && agent.messages.length === 0)) {
-      reportedStale.current = true;
-      onStale();
-    }
-  }, [agent.messages.length, error, onStale, remembered]);
-
-  return null;
-});
-
 const BUBBLE_AGENT_KEY = "ge:bubble-agent";
-
-const STALE_CODES = new Set(["session_expired", "session_stranded", "session_not_active", "forbidden", "unauthorized"]);
 
 function readStorage(key: string): string | undefined {
   try {

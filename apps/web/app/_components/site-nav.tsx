@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { type Ref, useEffect, useRef } from "react";
 import { cn } from "@/lib/utils";
 import { AssistantIcon } from "./assistant-icon";
 import { ASSISTANT_PATH, isAssistantPage } from "./assistant-provider";
@@ -21,12 +22,20 @@ export function NavLinks({ highlight = false }: { readonly highlight?: boolean }
 }
 
 function HighlightedLinks() {
-  return <Links pathname={usePathname() ?? "/"} />;
+  const pathname = usePathname() ?? "/";
+  const nav = useRef<HTMLElement>(null);
+  // On a phone the links scroll sideways in their own row, and the last two start off screen:
+  // bring the current page's link into view. The copy of the nav that is hidden at this width
+  // has no box, so this does nothing there.
+  useEffect(() => {
+    nav.current?.querySelector('[aria-current="page"]')?.scrollIntoView({ block: "nearest", inline: "center" });
+  }, [pathname]);
+  return <Links navRef={nav} pathname={pathname} />;
 }
 
-function Links({ pathname }: { readonly pathname: string | undefined }) {
+function Links({ pathname, navRef }: { readonly pathname: string | undefined; readonly navRef?: Ref<HTMLElement> }) {
   return (
-    <nav aria-label="Main" className="flex items-center gap-1">
+    <nav aria-label="Main" className="flex items-center gap-1" ref={navRef}>
       {NAV.map((item) => {
         const active = pathname !== undefined && item.active(pathname);
         return (

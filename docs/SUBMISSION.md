@@ -216,3 +216,70 @@ The manual review earned its place. It found a credential leak that took product
 users sharing one chat, a message thread sorted wrongly, and a write with no way to see it. None
 was a failing eval. The build log records each one, and the checks that would have caught them are
 the next evals to write.
+
+## Appendix: Vercel fundamentals behind the web app
+
+Sections 1 to 8 are about the agents. This appendix covers the site around them: the Vercel and
+Next.js fundamentals that make the demo fast to load, and where each one is in the repository.
+
+### Partial prerendering
+
+Every page is partially prerendered (`cacheComponents` in `apps/web/next.config.ts`). The build
+splits each route in two:
+
+- **A static shell**: the header, navigation, footer, headings, copy and a skeleton for each piece
+  that is still to come. It is built once and served from Vercel's CDN, so it arrives before any
+  function has run.
+- **Dynamic holes**: whatever depends on the request, such as who is signed in, their policies and
+  their messages. Each sits behind a `<Suspense>` boundary and streams into the same response when
+  it is ready.
+
+```mermaid
+sequenceDiagram
+  participant B as Browser
+  participant C as Vercel CDN
+  participant F as Vercel Function
+  B->>C: GET /data
+  C-->>B: Static shell (header, copy, skeletons)
+  C->>F: Render the dynamic holes
+  F-->>B: Signed-in user, streamed into place
+  F-->>B: Policy table, streamed into place
+```
+
+The build output confirms it: all nine pages are marked Partial Prerender, and none is rendered
+entirely on demand.
+
+| Page | Prerendered shell | Streams in at request time |
+| --- | --- | --- |
+| Home | Header, hero, page copy | Account card, the steps to try |
+| Assistant | Page frame and chat skeleton | The viewer and their conversation |
+| Data | Headings and table skeleton | Policy records the viewer may see |
+| Phone | The explainer and a phone skeleton | The phone, with its owner's name and text messages |
+| Walkthrough, SA Submission | Page frame | The document, from a cache (below) |
+| Login | The whole form | Only a check that sends an already signed-in visitor home |
+
+A signed-in site would normally give all of this up, because reading a cookie makes the whole page
+dynamic. Here the cookie is read only inside the holes (`apps/web/lib/session.ts`), so pages that
+are personal to each user still get a cached first paint.
+
+### The other fundamentals
+
+| Fundamental | Where it shows up | What it buys |
+| --- | --- | --- |
+| **Streaming** | `<Suspense>` in `apps/web/app/(site)/layout.tsx` and each page; chat replies from the agents | The slowest query never holds up the rest of the page. Each skeleton is the size of what replaces it, so nothing shifts. |
+| **`use cache` and cache lifetimes** | `apps/web/lib/readme.ts` (the two document tabs), `site-footer.tsx` | The Walkthrough and this page are read from GitHub, cached, and refreshed in the background every five minutes. A visitor never waits on GitHub, and an edit needs no redeploy. |
+| **Partial prefetching** | `partialPrefetching` in `next.config.ts` | A link in view prefetches only the next page's static shell: one small cached response, and no function runs for a page nobody opens. A tap paints the shell at once. |
+| **Routing Middleware** | `apps/web/proxy.ts` | The signed-in check runs before any page renders, so a visitor without a session is redirected and never downloads a page. |
+| **Vercel Functions with Fluid compute** | Every route handler, and both agent services | Replies stream for as long as they need, within one default time limit. Routes share functions, which keeps the project inside its plan's function count. |
+| **Code splitting** | `next/dynamic` in `assistant-provider.tsx` and `assistant-bubble.tsx` | The chat client, markdown renderer and code highlighter load after the page is interactive, or when the chat is first opened. The JavaScript a page needs before it responds fell from about 957 KB to 250 KB compressed on Home, Data and Phone. |
+| **`next/font`** | `apps/web/app/layout.tsx` | Fonts are self-hosted with size-matched fallbacks. The first paint makes no request to Google and the text does not shift when the font arrives. |
+| **React Compiler** | `reactCompiler` in `next.config.ts` | Components are memoized at build time, so a streaming chat reply re-renders only the message that changed. |
+| **Speed Insights and Web Analytics** | `apps/web/app/layout.tsx` | Core Web Vitals from real visits, by page and device. This is the measure of record for speed. |
+| **File tracing** | `outputFileTracingIncludes` in `next.config.ts` | A copy of each document ships with its function, so the two document tabs still render if GitHub is unreachable. |
+
+### What was measured, and what was not
+
+- **Measured:** the JavaScript sizes above come from production builds before and after the
+  change. The layout was checked at phone width in a browser and in Safari on an iPhone simulator.
+- **Not measured:** load time on a real phone or a slow network. Speed Insights on the live site
+  is where those numbers come from.
