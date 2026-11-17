@@ -6,58 +6,35 @@ demo. GoodEnough is a fictional customer and all data in the demo is synthetic.
 **Live demo:** https://claims-agent-eve.vercel.app · sign in as `ana` / `quartz-north-amber-90`
 (adjuster) or `sam` / `slate-harbor-quartz-55` (supervisor).
 
-## The 10-minute version
+## Executive overview
 
-This page is what I would present to GoodEnough's platform and security leads. Sections 1 to 8
-below are the detail behind it.
+**The problem.** GoodEnough has about 30 AI agents, each built by a different team in its own way.
+Every one rebuilds the same plumbing, and every one needs its own security review. Several hold
+passwords that never change and work around the security controls GoodEnough already mandates.
+Approvals of changes to claims are improvised and can be lost. Nothing checks an agent before it
+goes live. New agents take months, and most of that time goes on infrastructure, not on the
+business idea.
 
-**1. The pain (1 min).** About 30 AI agents, built team by team. Vault is mandated, but an agent has
-no identity to log in with, so each one goes around it with a static database password, and often
-a model key too. Every agent is a fresh security review. Approvals and retries are hand-built, and
-lost on a redeploy. Nothing tests an agent before it ships. Time to market is set by plumbing, not
-by the idea.
+**What stays with GoodEnough.** The systems GoodEnough already trusts stay where they are and under
+its control: its security vault, the claims database, its staff directory and its audit log.
+Vercel runs the agents and their release process. Agents get short-lived, minimal access to
+GoodEnough's systems, never standing keys.
 
-**2. The boundary (1 min).** GoodEnough keeps what it trusts: Vault, the claims database, its
-identity provider and its audit log. Vercel runs the agents, the model routing and the release
-path. Only two things cross: a database user that lives for minutes, and the minimum query result.
+**What Vercel provides.** Three capabilities do the heavy lifting:
+- **Access without stored passwords.** Each agent proves who it is with an identity Vercel issues
+  automatically, and receives database access that expires within minutes. There are no
+  passwords to steal or rotate, and test versions can only ever touch test data.
+- **Approvals that can't be lost.** Any change to a claim waits for a supervisor, and never the
+  person who asked, for as long as it takes, even through system updates. Every change records
+  who asked and who approved.
+- **One managed route to AI models.** All agents reach AI models through a single Vercel service,
+  with automatic failover between providers and no model keys to manage.
 
-**3. Three primitives (3 min).**
-- **OIDC federation into Vault.** Vercel signs a token for each deployment. The agent logs in to
-  Vault with it and gets a database user for one step. No agent holds a secret, and Vault, not
-  application code, decides that a preview only ever reaches test data.
-- **Vercel Workflow, through eve.** Every conversation is durable. A write waits for a supervisor
-  other than the requester, for days if need be, across restarts and redeploys, with no queue
-  for the team to build.
-- **AI Gateway.** One endpoint for every model, authenticated by the same deployment token, with a
-  fallback on another provider. No model keys to issue or rotate.
+Around them, every new version is tested automatically before it can go live, and the same tests
+grade old and new agents so progress is measurable.
 
-Supporting them: preview deployments with a required eval check (21 evals on every preview; the 15
-safe on live data before any production promotion), Deployment Protection with Trusted Sources, and
-the AI SDK paths for agents that should not move.
-
-**4. Live demo (5 to 7 min).**
-1. As **ana**: `Summarize open claims for policy #1042.` Minimal fields, no holder IDs. Then
-   `Show me the open claims for policy #2001.` A refusal: access comes from the sign-in.
-2. As **ana**: `Flag claim 77 for review: possible duplicate invoice.` It stops for a supervisor.
-   No credential exists while it waits.
-3. As **sam**, by link or by text on the Phone page: approve. Ana's chat completes, and the Data
-   page records both names.
-4. Switch to **Claims Helper v1** (legacy) and repeat the summary: it obeys a note planted in a
-   claim and flags everything, approved by itself. Same model, same data; the rules live in the
-   platform.
-5. If there is time: the **Migration Advisor** scores Reserve Desk against the same cases,
-   recommends a path from a fixed rubric (not always eve), and opens the draft PR that moves it.
-
-**5. Outcomes (1 min).**
-- Standing secrets held by agents: 4 today, 0 on the golden path.
-- Writes with a named requester and a different approver: 0% today, 100%.
-- Pending approvals lost across a deploy: all today, none.
-- Assumed for a regional insurer, to be replaced with GoodEnough's own numbers in week one: a new
-  agent from idea to production in 3 weeks instead of 12, and security review in 3 days instead
-  of 3 weeks, because each agent is one reviewed Terraform block and the shared evals.
-
-**The ask:** start the rollout in section 5 with two agents, one read-only and one that writes, so
-both kinds of migration are proven before the other 28.
+**The ask:** start the rollout in section 5 with two agents, one that only reads and one that
+changes records, so both kinds of migration are proven before the other 28.
 
 ## 1. Problem statement
 

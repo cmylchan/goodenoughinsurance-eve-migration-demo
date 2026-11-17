@@ -7,9 +7,9 @@
 | `ana` | `quartz-north-amber-90` | Claims adjuster. Sees policies 1042 and 1043. Cannot approve. |
 | `sam` | `slate-harbor-quartz-55` | Claims supervisor. Sees every policy. Can approve. |
 
-**Short on time?** The [SA submission](docs/SUBMISSION.md) opens with a one-page summary: the pain,
-the boundary, the three Vercel primitives that carry the design, the demo and the outcomes. This
-README is the full walkthrough.
+**Short on time?** The [SA submission](docs/SUBMISSION.md) opens with an executive overview for
+business readers: the problem, what stays with GoodEnough, and what Vercel provides. This README is
+the full walkthrough.
 
 How Vercel helps a company move its legacy AI agents onto one golden path, with AI doing most of the
 migration work.
