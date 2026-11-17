@@ -128,9 +128,7 @@ supervisors are assigned every policy. The agent did not change; the person did.
 
 ## Demo 2: Migrating legacy agents
 
-> The legacy agents are live in the web chat. The advisor's last two steps need the two items in
-> [Finishing the migration demo's setup](#finishing-the-migration-demos-setup). The full design is
-> in [docs/SPEC.md](docs/SPEC.md).
+> The legacy agents are live in the web chat. The full design is in [docs/SPEC.md](docs/SPEC.md).
 
 Most of GoodEnough's agents were built before the golden path. This demo shows a team moving one
 onto it. Sign in as **ana**. The Demo Guide runs these steps too.
@@ -366,17 +364,7 @@ agent secrets:
   standing secrets on purpose. They are what the golden path replaces, they reach `claims_test`
   only, and the migration advisor reports each one as a finding.
 
-## Finishing the migration demo's setup
-
-The database, the Vault roles and the legacy agents' environment variables are in place. Two
-one-time items remain for the advisor's last two steps (cutting the PR and scoring its preview):
-
-1. **GitHub App for the advisor.** `eve add channel/github --agent migration` (Vercel Connect), then
-   install the app on this repository. The advisor's tools expect the connector `github/ge-migrate`;
-   set `GITHUB_CONNECTOR` if yours is named differently.
-2. **Trusted source for preview scores.** In the Vercel project's Deployment Protection settings, add
-   this project's own Vercel OIDC issuer as a Trusted Source, so the advisor on production can score
-   a protected preview.
+## Maintaining the migration demo
 
 One rule to keep when changing the legacy agents' variables: never name the gateway key
 `AI_GATEWAY_API_KEY`. The gateway provider prefers that variable over OIDC, for every agent.
