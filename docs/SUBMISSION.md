@@ -91,10 +91,10 @@ writes nobody approved.
 
 ### Where Vercel fits: Connect, underpinned by Replace
 
-| Role | Does it apply? | What it means here |
-| --- | --- | --- |
-| **Connect** | **Yes. This is the design.** | Agents hosted on Vercel securely use the systems that already matter to GoodEnough: Vault, the claims database, the identity provider. None of them moves. The connection is the deployment's own OIDC identity, so nothing is stored on either side. |
-| **Replace** | **Yes. It is what makes Connect safe to repeat 30 times.** | Vercel takes the place of the layer every team was hand-building: approval queues, retry loops, nightly-job wrappers, model keys and routing, preview environments, and a release gate. None of that work is specific to insurance. |
+| Role | What it means here |
+| --- | --- |
+| **Connect** | Agents hosted on Vercel securely use the systems that already matter to GoodEnough: Vault, the claims database, the identity provider. None of them moves. The connection is the deployment's own OIDC identity, so nothing is stored on either side. |
+| **Replace** | Vercel takes the place of the layer every team was hand-building: approval queues, retry loops, nightly-job wrappers, model keys and routing, preview environments, and a release gate. None of that work is specific to insurance. |
 
 Connect alone would leave each team to build the plumbing again, on a new host. Replace alone would
 ask the customer to move systems it has good reason to keep. Together: the customer's systems stay
