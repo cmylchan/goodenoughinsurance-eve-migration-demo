@@ -43,7 +43,9 @@ export function labelFor(key: string): string {
 }
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}(?:[T ]\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?(?:Z|[+-]\d{2}(?::?\d{2})?)?)?$/;
-const MONEY_KEY = /(amount|reserve|price|total|cost|paid|balance)(?!_?band)/i;
+// Money is named as money. A bare "total" is a count as often as a sum (an eval score's
+// `total: 19` is cases, not dollars), so it reads as money only as "total_amount" or "total_cost".
+const MONEY_KEY = /(amount|reserve|price|cost|paid|balance)(?!_?band)/i;
 const STATUS_KEY = /^(status|state|outcome|decision|verdict|result)$/i;
 // Identifiers and years read as written: policy 1042, not 1,042.
 const ID_KEY = /(^|_)(id|ids|no|number|ref|year|code)$|[a-z](Id|Ids|Number|Ref)$/;
