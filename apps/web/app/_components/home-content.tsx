@@ -4,13 +4,14 @@ import { ArrowRightIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAssistant, useViewer } from "./assistant-provider";
 import { goldenPathSteps } from "./demo-guide";
+import { hasOpenApproval } from "./open-approval";
 
 /** The role-specific walkthrough. Streams in once the session is read; see <TryStepsSkeleton>. */
 export function TrySteps() {
   const viewer = useViewer();
   const { ask, agent } = useAssistant();
   const steps = goldenPathSteps(viewer.canApprove);
-  const ready = agent !== undefined && agent.status !== "resuming";
+  const ready = agent !== undefined && agent.status !== "resuming" && !hasOpenApproval(agent.view);
 
   return (
     <>

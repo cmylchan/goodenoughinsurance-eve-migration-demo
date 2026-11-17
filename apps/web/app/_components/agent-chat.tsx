@@ -11,9 +11,9 @@ import {
   type Activity,
 } from "eve/events";
 import type { UseEveAgentReturn } from "eve/react";
-import { AlertCircleIcon, BrainIcon, Loader2Icon, SquareIcon } from "lucide-react";
+import { AlertCircleIcon, BrainIcon, ClockIcon, Loader2Icon, SquareIcon, XIcon } from "lucide-react";
 import { usePathname } from "next/navigation";
-import { Suspense, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import {
   Conversation,
   ConversationContent,
@@ -31,6 +31,7 @@ import {
 import { Trace, TraceIcon, TraceLine, TraceTitle } from "@/components/ui/trace";
 import { cn } from "@/lib/utils";
 import { AgentMessage } from "./agent-message";
+import { hasOpenApproval } from "./open-approval";
 import { useAssistant, useViewer } from "./assistant-provider";
 import { DEFAULT_AGENT } from "./chat-agents";
 import { pageContext, suggestionsFor, type PageContext } from "./demo-guide";
@@ -132,6 +133,10 @@ export function EveChatBody({
   readonly intro: ChatIntro;
 }) {
   const [cancellationError, setCancellationError] = useState<string>();
+  // Messages typed while an approval is open. eve would treat one as steering and withdraw the
+  // approval, so the supervisor's request would vanish and the call read as refused. They wait
+  // here instead and are sent, in order, once the approval is decided and the turn has finished.
+  const [queued, setQueued] = useState<readonly string[]>([]);
   const [hasInputText, setHasInputText] = useState(false);
   const compact = variant === "panel";
 
@@ -149,6 +154,7 @@ export function EveChatBody({
     now.kind !== "waiting-on-interaction" &&
     (lastMessage?.role !== "assistant" || isPendingAssistantShell);
   const failed = isBusy || isResuming ? undefined : failure(agent.view, turns(agent.view).at(-1)?.turnId);
+  const approvalOpen = hasOpenApproval(agent.view);
   const turnFailure =
     failed?.code === "MODEL_CALL_FAILED" ? "The model is temporarily unavailable. Please try again." : failed?.message;
   const errorMessage = cancellationError ?? agent.error?.message ?? turnFailure;
@@ -169,11 +175,25 @@ export function EveChatBody({
     });
   };
 
+  // Send what waited once nothing is open: the approval decided and the agent done answering it.
+  const readyForQueued = queued.length > 0 && !approvalOpen && !turnOpen && !isBusy && !isResuming;
+  useEffect(() => {
+    if (!readyForQueued) return;
+    const text = queued.join("\n\n");
+    setQueued([]);
+    void ask(text);
+  }, [readyForQueued, queued, ask]);
+
   const handleSubmit = async (message: PromptInputMessage) => {
     const text = message.text.trim();
     if ((text.length === 0 && message.files.length === 0) || isResuming) return;
     setHasInputText(false);
     setCancellationError(undefined);
+
+    if (approvalOpen && message.files.length === 0) {
+      setQueued((list) => [...list, text]);
+      return;
+    }
 
     if (message.files.length === 0) {
       await ask(text);
@@ -225,6 +245,13 @@ export function EveChatBody({
               ),
             )}
             {showPendingThinking ? <PendingActivity activity={now} /> : null}
+            {queued.map((text, index) => (
+              <QueuedMessage
+                key={`${index}:${text}`}
+                onRemove={() => setQueued((list) => list.filter((_, at) => at !== index))}
+                text={text}
+              />
+            ))}
             {errorMessage ? <ErrorMessage message={errorMessage} /> : null}
           </ConversationContent>
           <ConversationScrollButton />
@@ -241,7 +268,7 @@ export function EveChatBody({
             className={compact ? "min-h-12" : undefined}
             disabled={isResuming}
             onChange={(event) => setHasInputText(event.currentTarget.value.trim().length > 0)}
-            placeholder={intro.placeholder}
+            placeholder={approvalOpen ? "Waiting on an approval. Messages you send now go once it's decided." : intro.placeholder}
           />
           <ComposerAction
             canCancel={turnOpen}
@@ -333,6 +360,29 @@ function ComposerAction({
     <PromptInputButton aria-label="Stop" className="absolute right-2.5 bottom-2.5" onClick={onCancel} variant="outline">
       <SquareIcon className="size-3 fill-current" />
     </PromptInputButton>
+  );
+}
+
+/** A message held until the open approval is decided, so it can't withdraw that approval. */
+function QueuedMessage({ text, onRemove }: { readonly text: string; readonly onRemove: () => void }) {
+  return (
+    <Message from="user">
+      <MessageContent className="opacity-70">
+        <p className="whitespace-pre-wrap">{text}</p>
+        <p className="mt-1 flex items-center gap-1.5 text-muted-foreground text-xs">
+          <ClockIcon className="size-3" />
+          Queued: sends once the approval is decided
+          <button
+            aria-label="Remove queued message"
+            className="ml-1 rounded p-0.5 hover:bg-muted"
+            onClick={onRemove}
+            type="button"
+          >
+            <XIcon className="size-3" />
+          </button>
+        </p>
+      </MessageContent>
+    </Message>
   );
 }
 

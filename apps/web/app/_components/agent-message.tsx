@@ -264,6 +264,26 @@ const CALL_LINES: Record<
   running: { status: "running" },
 };
 
+/**
+ * "rejected" covers several endings that read very differently to a person. Only a person's
+ * "deny" is a denial: an approval withdrawn by a follow-up message, or stopped with the turn,
+ * was never decided, and a call the approval policy refused never reached anyone.
+ */
+function rejectedNote(part: EveToolPart): string {
+  switch (part.interaction?.outcome) {
+    case "withdrawn":
+      return "Withdrawn, not decided";
+    case "interrupted":
+    case "abandoned":
+    case "expired":
+      return "Stopped, not decided";
+    case "declined":
+      return "Denied";
+    default:
+      return part.interaction === undefined ? "Not allowed" : "Denied";
+  }
+}
+
 function ToolLine({
   part,
   state,
@@ -272,7 +292,8 @@ function ToolLine({
   readonly state: CallState | undefined;
 }) {
   // A call the model is still writing has no row yet.
-  const { note, status } = state === undefined ? { status: "running" as const } : CALL_LINES[state];
+  const { note: stateNote, status } = state === undefined ? { status: "running" as const } : CALL_LINES[state];
+  const note = state === "rejected" ? rejectedNote(part) : stateNote;
   // An answer waits on its approval until every approval asked with it is decided.
   const answered =
     state === "approval" && part.interaction?.answer !== undefined
