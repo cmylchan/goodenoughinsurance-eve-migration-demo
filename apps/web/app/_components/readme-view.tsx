@@ -2,11 +2,11 @@
 
 import { cjk } from "@streamdown/cjk";
 import { code } from "@streamdown/code";
-import { createMermaidPlugin } from "@streamdown/mermaid";
 import { ArrowRightIcon } from "lucide-react";
 import Link from "next/link";
 import { Children, isValidElement, type ComponentProps, type ReactNode } from "react";
 import { MessageResponse } from "@/components/ai-elements/message";
+import type { DiagramPlugin, MermaidInstance } from "@streamdown/mermaid";
 import { cn } from "@/lib/utils";
 import { useAssistant } from "./assistant-provider";
 import { guideChapters } from "./demo-guide";
@@ -36,29 +36,61 @@ const PROMPTS = new Map(
     .flatMap((step) => (step.prompt && step.agent ? [[step.prompt, step.agent] as const] : [])),
 );
 
+type MermaidConfig = Parameters<MermaidInstance["initialize"]>[0];
+
+/**
+ * The Mermaid plugin, loaded on first use. `@streamdown/mermaid` imports all of Mermaid up front,
+ * so importing it here put most of a megabyte in front of the README's first paint. This plugin has
+ * the same shape, and fetches the real one the first time a diagram renders.
+ */
+function lazyMermaid(config: MermaidConfig): DiagramPlugin {
+  let real: Promise<MermaidInstance> | undefined;
+  let override: MermaidConfig | undefined;
+  const load = () =>
+    (real ??= import("@streamdown/mermaid").then(({ createMermaidPlugin }) => {
+      const instance = createMermaidPlugin({ config }).getMermaid();
+      if (override) instance.initialize(override);
+      return instance;
+    }));
+  const instance: MermaidInstance = {
+    initialize(next) {
+      override = next;
+      void real?.then((loaded) => loaded.initialize(next));
+    },
+    render: async (id, source) => (await load()).render(id, source),
+  };
+  return {
+    name: "mermaid",
+    type: "diagram",
+    language: "mermaid",
+    getMermaid(next) {
+      if (next) instance.initialize(next);
+      return instance;
+    },
+  };
+}
+
 // Diagrams in the README are drawn in the site's palette: white boxes, grey outlines, burgundy
 // arrows, Lato. GitHub draws the same source in its own default theme.
 const plugins = {
   cjk,
   code,
-  mermaid: createMermaidPlugin({
-    config: {
-      theme: "base",
-      themeVariables: {
-        fontFamily: "Lato, Helvetica Neue, Arial, sans-serif",
-        fontSize: "15px",
-        primaryColor: "#ffffff",
-        primaryTextColor: "#4a4a4a",
-        primaryBorderColor: "#a3a3a3",
-        lineColor: "#8a1538",
-        secondaryColor: "#f6ecef",
-        tertiaryColor: "#f7f7f7",
-        clusterBkg: "#f7f7f7",
-        clusterBorder: "#dadada",
-        edgeLabelBackground: "#ffffff",
-      },
-      flowchart: { curve: "basis", padding: 14 },
+  mermaid: lazyMermaid({
+    theme: "base",
+    themeVariables: {
+      fontFamily: "Lato, Helvetica Neue, Arial, sans-serif",
+      fontSize: "15px",
+      primaryColor: "#ffffff",
+      primaryTextColor: "#4a4a4a",
+      primaryBorderColor: "#a3a3a3",
+      lineColor: "#8a1538",
+      secondaryColor: "#f6ecef",
+      tertiaryColor: "#f7f7f7",
+      clusterBkg: "#f7f7f7",
+      clusterBorder: "#dadada",
+      edgeLabelBackground: "#ffffff",
     },
+    flowchart: { curve: "basis", padding: 14 },
   }),
 };
 
