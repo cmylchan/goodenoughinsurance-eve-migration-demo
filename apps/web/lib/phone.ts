@@ -35,11 +35,41 @@ export async function respondAs(request: Request, ticket: ApprovalTicket, decisi
     .respond([{ interactionId: ticket.interactionId, optionId: decision }], { signal: AbortSignal.timeout(45_000) });
 
   // The agent settles the request only if its policy allowed this responder.
-  for await (const event of delivery.stream()) {
+  const events = delivery.stream()[Symbol.asyncIterator]();
+  try {
+    return await readVerdict(events, ticket, decision);
+  } finally {
+    // Stop reading: the rest of the turn (the agent's reply) doesn't concern the phone.
+    void events.return?.();
+  }
+}
+
+async function readVerdict(
+  events: AsyncIterator<{ readonly type: string; readonly data?: any }>,
+  ticket: ApprovalTicket,
+  decision: "approve" | "deny",
+): Promise<RespondOutcome> {
+  for (let next = await events.next(); !next.done; next = await events.next()) {
+    const event = next.value;
     if (event.type === "interaction.settled" && event.data.interactionId === ticket.interactionId) {
-      return event.data.outcome === "accepted" || event.data.outcome === "declined" ? "accepted" : "unavailable";
+      const outcome = event.data.outcome;
+      if (outcome !== "accepted" && outcome !== "declined") return "unavailable";
+      // An approval answers before the approved call runs. Wait, briefly, for that call to finish,
+      // so the phone page's refresh of its stored page data happens after the row is written.
+      if (outcome === "accepted" && decision === "approve") await approvedCallSettles(events);
+      return "accepted";
     }
     if (event.type === "delivery.settled") break;
   }
   return "refused";
+}
+
+/** Reads on until the next tool call settles, for at most 15 seconds. The answer stands either way. */
+async function approvedCallSettles(events: AsyncIterator<{ readonly type: string }>): Promise<void> {
+  const deadline = new Promise<"timeout">((resolve) => setTimeout(() => resolve("timeout"), 15_000).unref?.());
+  for (;;) {
+    const next = await Promise.race([events.next(), deadline]);
+    if (next === "timeout" || next.done) return;
+    if (next.value.type === "call.settled" || next.value.type === "delivery.settled") return;
+  }
 }

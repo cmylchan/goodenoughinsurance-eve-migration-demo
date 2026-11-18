@@ -3,6 +3,7 @@
 import { ArrowUpIcon, SignalIcon } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
+import { useDropStalePageData } from "./page-data-sync";
 
 interface PhoneText {
   readonly id: string;
@@ -24,6 +25,7 @@ function timeOf(at: string): string {
 /** A phone-shaped frame with the texts sent to the signed-in user's simulated number. */
 export function PhoneScreen({ name, phone, canApprove }: { readonly name: string; readonly phone: string; readonly canApprove: boolean }) {
   const [load, setLoad] = useState<Load>({ state: "loading" });
+  const dropStalePageData = useDropStalePageData();
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
   // The reply being sent, shown at once so the phone never looks as if it ignored the tap, and
@@ -80,7 +82,12 @@ export function PhoneScreen({ name, phone, canApprove }: { readonly name: string
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ text }),
       });
-      if (!response.ok) {
+      if (response.ok) {
+        // The agent accepted the decision and, for an approval, has finished the write it allowed.
+        // Drop the page data this browser stored, so Data shows the result straight away.
+        const result = (await response.json().catch(() => ({}))) as { status?: string };
+        if (result.status === "accepted") dropStalePageData();
+      } else {
         // Nothing was recorded or it stopped half-way: say so and give the text back.
         setDraft(text);
         setSendError(
