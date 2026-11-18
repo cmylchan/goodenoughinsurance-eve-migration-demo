@@ -13,7 +13,7 @@ import {
 import type { UseEveAgentReturn } from "eve/react";
 import { AlertCircleIcon, BrainIcon, ClockIcon, Loader2Icon, SquareIcon, XIcon } from "lucide-react";
 import { usePathname } from "next/navigation";
-import { Suspense, useEffect, useRef, useState } from "react";
+import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import {
   Conversation,
   ConversationContent,
@@ -134,6 +134,10 @@ export function EveChatBody({
   readonly intro: ChatIntro;
 }) {
   const [cancellationError, setCancellationError] = useState<string>();
+  // A send that failed, or that never started a turn: what to say, and the text to send again.
+  const [sendError, setSendError] = useState<{ readonly message: string; readonly text?: string }>();
+  // The send still waiting for the agent to start a turn for it, if any.
+  const [inFlight, setInFlight] = useState<{ readonly text: string; readonly turns: number }>();
   // Messages typed while an approval is open. eve would treat one as steering and withdraw the
   // approval, so the supervisor's request would vanish and the call read as refused. They wait
   // here instead and are sent, in order, once the approval is decided and the turn has finished.
@@ -151,6 +155,7 @@ export function EveChatBody({
   const now = activity(agent.view);
   // Show what the agent is doing until its message has something to show, unless it waits on you.
   const showPendingThinking =
+    sendError === undefined &&
     isBusy &&
     now.kind !== "waiting-on-interaction" &&
     (lastMessage?.role !== "assistant" || isPendingAssistantShell);
@@ -166,12 +171,53 @@ export function EveChatBody({
     : failed?.code === "MODEL_CALL_FAILED"
       ? "The model is temporarily unavailable. Please try again."
       : failed?.message;
+  const turnCount = turns(agent.view).length;
+  const turnCountRef = useRef(turnCount);
+  turnCountRef.current = turnCount;
+
+  // Every send goes through here, so a refused or lost message is said, never left as "Thinking".
+  const send = useCallback(
+    async (message: string | MessagePart[]) => {
+      const text = typeof message === "string" ? message : message.flatMap((part) => (part.type === "text" ? [part.text] : [])).join("\n");
+      setSendError(undefined);
+      // A message that steers a running turn starts no turn of its own, so there is nothing to wait for.
+      setInFlight(turnOpen ? undefined : { text, turns: turnCountRef.current });
+      try {
+        await ask(message);
+      } catch (error) {
+        setInFlight(undefined);
+        setSendError({ message: sendFailure(error), text: text || undefined });
+      }
+    },
+    [ask, turnOpen],
+  );
+
+  // Delivered once the agent has started a turn for it.
+  useEffect(() => {
+    if (inFlight && turnCount > inFlight.turns) setInFlight(undefined);
+  }, [inFlight, turnCount]);
+  // Not delivered after 20 seconds: say so rather than keep showing "Thinking".
+  useEffect(() => {
+    if (!inFlight) return;
+    const timer = setTimeout(() => {
+      setInFlight(undefined);
+      setSendError({
+        message:
+          "Your message hasn't reached the assistant. If someone signed in as another user in another window of this " +
+          "browser, reload this page. Otherwise, try again.",
+        text: inFlight.text || undefined,
+      });
+    }, 20_000);
+    return () => clearTimeout(timer);
+  }, [inFlight]);
+
   const lastAsked = lastUserText(agent.messages);
-  const retry =
-    failed?.code === "MODEL_CALL_FAILED" && lastAsked !== undefined && cancellationError === undefined && agent.error === undefined
-      ? () => void ask(lastAsked)
+  const retry = sendError?.text
+    ? () => void send(sendError.text!)
+    : failed?.code === "MODEL_CALL_FAILED" && lastAsked !== undefined && cancellationError === undefined && agent.error === undefined
+      ? () => void send(lastAsked)
       : undefined;
-  const errorMessage = cancellationError ?? agent.error?.message ?? turnFailure;
+  const errorMessage = sendError?.message ?? cancellationError ?? agent.error?.message ?? turnFailure;
   // A session that ended outside eve never settles its requests, so they stay open, yet it
   // accepts no answer. Once the server says so, stop offering them.
   const sessionEnded = agent.error instanceof ClientError && agent.error.code === "session_not_active";
@@ -195,8 +241,8 @@ export function EveChatBody({
     if (!readyForQueued) return;
     const text = queued.join("\n\n");
     setQueued([]);
-    void ask(text);
-  }, [readyForQueued, queued, ask]);
+    void send(text);
+  }, [readyForQueued, queued, send]);
 
   const handleSubmit = async (message: PromptInputMessage) => {
     const text = message.text.trim();
@@ -210,7 +256,7 @@ export function EveChatBody({
     }
 
     if (message.files.length === 0) {
-      await ask(text);
+      await send(text);
       return;
     }
     const parts: MessagePart[] = [];
@@ -218,7 +264,7 @@ export function EveChatBody({
     for (const file of message.files) {
       parts.push({ data: file.url, filename: file.filename, mediaType: file.mediaType, type: "file" });
     }
-    await ask(parts);
+    await send(parts);
   };
 
   const showEmptyState = isEmpty && !isResuming && errorMessage === undefined;
@@ -226,7 +272,7 @@ export function EveChatBody({
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       {showEmptyState ? (
-        <EmptyState compact={compact} intro={intro} onPick={(text) => void ask(text)} />
+        <EmptyState compact={compact} intro={intro} onPick={(text) => void send(text)} />
       ) : (
         <Conversation
           className="min-h-0 flex-1"
@@ -267,7 +313,11 @@ export function EveChatBody({
               />
             ))}
             {errorMessage ? (
-              <ErrorMessage message={errorMessage} onRetry={retry} title={refused ? "Reply blocked" : undefined} />
+              <ErrorMessage
+                message={errorMessage}
+                onRetry={retry}
+                title={sendError ? "Not delivered" : refused ? "Reply blocked" : undefined}
+              />
             ) : null}
           </ConversationContent>
           <ConversationScrollButton />
@@ -277,7 +327,7 @@ export function EveChatBody({
       <div className={cn("w-full shrink-0", compact ? "border-t bg-card p-3" : "mx-auto max-w-5xl px-4 pt-2 pb-6 sm:px-6")}>
         {/* Once a conversation is under way the starter prompts move here, still matched to the page. */}
         {!showEmptyState && !turnOpen && !isResuming ? (
-          <SuggestionChips onPick={(text) => void ask(text)} suggestions={intro.suggestions} />
+          <SuggestionChips onPick={(text) => void send(text)} suggestions={intro.suggestions} />
         ) : null}
         <PromptInput onSubmit={handleSubmit}>
           <PromptInputTextarea
@@ -430,6 +480,14 @@ function useRefreshOnWrite(messages: UseEveAgentReturn["messages"]) {
     for (const id of fresh) seen.current.add(id);
     dropStalePageData();
   }, [key, dropStalePageData]);
+}
+
+/** What to tell the person when a message couldn't be sent. */
+function sendFailure(error: unknown): string {
+  if (error instanceof ClientError && (error.status === 401 || error.status === 403)) {
+    return "The assistant didn't accept this message as you. If someone signed in as another user in another window of this browser, reload this page.";
+  }
+  return error instanceof Error && error.message ? `Your message wasn't sent: ${error.message}` : "Your message wasn't sent. Try again.";
 }
 
 /** The text of the user's latest message, to send again after a failed turn. */

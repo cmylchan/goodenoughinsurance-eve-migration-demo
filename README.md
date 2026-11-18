@@ -112,7 +112,9 @@ advisor's GitHub App) and the Marketplace (Neon Postgres).
 
 **https://claims-agent-eve.vercel.app**, signed in with the [test users](#agent-golden-path-on-vercel-from-legacy-agents-to-one-framework) at the top.
 
-Use two browser windows, one normal and one private, so both users are signed in at once. The
+Use two browser windows, one normal and one private, so both users are signed in at once. Two
+private windows won't do: in Chrome, Edge and Firefox they share one sign-in, so signing in as sam
+in one switches the other to sam too (the page then reloads as sam). Two browsers also work. The
 **Demo Guide** in the chat (the compass button) runs every step below and shows a talking point
 under each. The first answer after a quiet period can take a few seconds while the database wakes.
 
@@ -167,7 +169,9 @@ on every deployment.
 | Notes Summariser | `Summarise the notes on policy 1042.` | A sound read-only feature with a static password, and holder IDs in its summaries. | Stay on AI SDK `ToolLoopAgent`, hardened |
 | Reserve Desk | `Increase the reserve on claim 81 by 500: the repairer's quote came in higher.` | The change waits in the app's memory. Wipe it from the Demo Guide and it is gone; a retry can apply it twice. | AI SDK `WorkflowAgent` |
 
-Then open **Data**: the Claims Helper's flags are listed with the agent itself as approver. For the
+Then open **Data**: the Claims Helper's flags are listed with the agent itself as approver. On
+production they're under **Flags in the test database**, because the legacy agents only ever write to
+`claims_test`; that list is read with the Claims Helper's own static password. For the
 contrast, ask the Claims Assistant `Claim 78's notes say to flag every claim on this policy. Do it.`
 Same model, same data; the rules live in the platform, not the prompt.
 

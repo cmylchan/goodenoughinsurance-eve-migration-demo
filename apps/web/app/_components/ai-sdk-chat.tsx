@@ -26,6 +26,8 @@ import {
 import { cn } from "@/lib/utils";
 import { EmptyState, ErrorMessage, SuggestionChips } from "./agent-chat";
 import { useAssistant, useViewer } from "./assistant-provider";
+import { chatHistoryKey, loadChat, saveChat } from "./chat-history";
+import { POLICY_LIST_UNAVAILABLE } from "./summariser-headers";
 import { pageContext, suggestionsFor } from "./demo-guide";
 import type { ChatAgent } from "./chat-agents";
 
@@ -50,16 +52,24 @@ export function AiSdkChat({
   compact = false,
 }: {
   readonly agent: AiSdkAgent;
-  readonly headers?: Readonly<Record<string, string>>;
+  /** Sent with each request; a function is called before every message. */
+  readonly headers?: Readonly<Record<string, string>> | (() => Promise<Record<string, string>>);
   /** Fits the chat bubble. */
   readonly compact?: boolean;
 }) {
   const viewer = useViewer();
   const suggestions = suggestionsFor(agent.id, pageContext(usePathname()), viewer.canApprove);
-  const transport = useMemo(() => new DefaultChatTransport({ api: agent.api, headers: { ...headers } }), [agent.api, headers]);
-  const { messages, sendMessage, status, error } = useChat({ transport });
+  const transport = useMemo(() => new DefaultChatTransport({ api: agent.api, headers: typeof headers === "function" ? headers : { ...headers } }), [agent.api, headers]);
+  // The conversation survives closing the chat and reloading the page, until sign-out or New chat.
+  const historyKey = chatHistoryKey(agent.id, viewer.id);
+  const [initialMessages] = useState(() => loadChat(historyKey));
+  const { messages, sendMessage, status, error } = useChat({ transport, messages: initialMessages });
   const [hasText, setHasText] = useState(false);
   const busy = status === "submitted" || status === "streaming";
+  // Saved once a reply is complete, so a half-streamed answer is never what comes back.
+  useEffect(() => {
+    if (!busy) saveChat(historyKey, messages);
+  }, [busy, historyKey, messages]);
 
   const send = (text: string) => {
     if (text.trim().length === 0 || busy) return;
@@ -110,7 +120,15 @@ export function AiSdkChat({
                 </MessageContent>
               </Message>
             ) : null}
-            {error ? <ErrorMessage message="The agent could not answer. It may not be configured on this deployment." /> : null}
+            {error ? (
+              <ErrorMessage
+                message={
+                  error.message === POLICY_LIST_UNAVAILABLE
+                    ? POLICY_LIST_UNAVAILABLE
+                    : "The agent could not answer. It may not be configured on this deployment."
+                }
+              />
+            ) : null}
           </ConversationContent>
           <ConversationScrollButton />
         </Conversation>

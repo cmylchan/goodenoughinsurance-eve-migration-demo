@@ -9,8 +9,10 @@ import { AgentSwitcher } from "./agent-switcher";
 import { AiSdkChat } from "./ai-sdk-chat";
 import { useAssistant, useViewer } from "./assistant-provider";
 import { agentHref, chatAgent, DEFAULT_AGENT } from "./chat-agents";
+import { chatHistoryKey, clearChat } from "./chat-history";
 import { EveAgentChat } from "./eve-agent-chat";
 import { GuidePanel } from "./guide-panel";
+import { summariserHeaders } from "./summariser-headers";
 
 /**
  * The full-page assistant. The agent switcher picks who it talks to: the Claims Assistant (the
@@ -20,14 +22,11 @@ import { GuidePanel } from "./guide-panel";
 export function AssistantPage({
   agentId = DEFAULT_AGENT,
   linkedSession,
-  assignedPolicies = "",
   shared = false,
 }: {
   readonly agentId?: string;
   /** A session opened from a conversation link to an agent other than the Claims Assistant. */
   readonly linkedSession?: string;
-  /** The viewer's assigned policies, which the fraud portal's client sends with each request. */
-  readonly assignedPolicies?: string;
   /** Opened from a conversation link (/s/...), so it may be someone else's conversation. */
   readonly shared?: boolean;
 }) {
@@ -41,8 +40,9 @@ export function AssistantPage({
 
   const showNewChat = isClaims ? sessionId !== undefined : agent.kind === "eve" ? otherSession !== undefined : agent.kind === "ai-sdk";
   const startNewChat = () => {
-    if (isClaims) newChat();
-    else setReset((value) => value + 1);
+    if (isClaims) return newChat();
+    if (agent.kind === "ai-sdk") clearChat(chatHistoryKey(agent.id, viewer.id));
+    setReset((value) => value + 1);
   };
 
   return (
@@ -99,7 +99,7 @@ export function AssistantPage({
         <AiSdkChat
           agent={agent}
           // The fraud portal's client tells its agent which policies the analyst has.
-          headers={agent.id === "notes-summariser" ? { "x-user-policies": assignedPolicies } : undefined}
+          headers={agent.id === "notes-summariser" ? summariserHeaders : undefined}
           key={`${agent.id}:${reset}`}
         />
       )}

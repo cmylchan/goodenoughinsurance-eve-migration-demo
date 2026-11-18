@@ -7,6 +7,7 @@
 import { cn } from "@/lib/utils";
 import { AssistantChat, migrationIntro } from "./agent-chat";
 import { AiSdkChat } from "./ai-sdk-chat";
+import { summariserHeaders } from "./summariser-headers";
 import { useViewer } from "./assistant-provider";
 import { DEFAULT_AGENT, type ChatAgent } from "./chat-agents";
 import type { PageContext } from "./demo-guide";
@@ -16,22 +17,18 @@ import { GuidePanel } from "./guide-panel";
 export function BubblePanel({
   current,
   page,
-  policyIds,
   reset,
   onSession,
 }: {
   /** The agent the switcher is on. */
   readonly current: ChatAgent;
   readonly page: PageContext;
-  /** The viewer's policy list for the Notes Summariser; undefined while it is being fetched. */
-  readonly policyIds: string | undefined;
   /** Bumped to start another agent's conversation over. */
   readonly reset: number;
   readonly onSession: (sessionId: string | undefined) => void;
 }) {
   const viewer = useViewer();
   const isClaims = current.id === DEFAULT_AGENT;
-  const needsPolicies = current.id === "notes-summariser" && policyIds === undefined;
   return (
     <>
       {/* The Claims Assistant stays mounted while closed or switched away, so its scroll position and a draft survive. */}
@@ -40,13 +37,11 @@ export function BubblePanel({
       </div>
       {current.kind === "guide" ? (
         <GuidePanel compact />
-      ) : needsPolicies ? (
-        <div className="flex flex-1 items-center justify-center text-muted-foreground text-sm">Loading your policy list…</div>
       ) : current.kind === "ai-sdk" ? (
         <AiSdkChat
           agent={current}
           compact
-          headers={current.id === "notes-summariser" ? { "x-user-policies": policyIds ?? "" } : undefined}
+          headers={current.id === "notes-summariser" ? summariserHeaders : undefined}
           key={`${current.id}:${reset}`}
         />
       ) : !isClaims ? (
