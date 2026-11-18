@@ -14,7 +14,6 @@ import { isAssistantPage, useAssistant } from "./assistant-provider";
 import { agentHref, CHAT_AGENTS, chatAgent, DEFAULT_AGENT, GUIDE_AGENT } from "./chat-agents";
 import { chatHistoryKey, clearChat } from "./chat-history";
 import { pageContext } from "./demo-guide";
-import { assignedPolicyIds } from "./policy-actions";
 
 // The chats bring the markdown renderer, the code highlighter and the chat clients with them:
 // most of the site's JavaScript. A page that only shows the launcher doesn't need any of it, so
@@ -70,23 +69,6 @@ export function AssistantBubble() {
       window.clearTimeout(hide);
     };
   }, []);
-
-  // The Notes Summariser trusts a policy list its client sends. The full page gets that list from
-  // the server; here it is fetched the first time that agent is picked, and the chat waits for it.
-  const [policyIds, setPolicyIds] = useState<string>();
-  const needsPolicies = bubbleAgent === "notes-summariser" && policyIds === undefined;
-  useEffect(() => {
-    if (!needsPolicies) return;
-    let live = true;
-    void assignedPolicyIds()
-      .catch(() => "")
-      .then((ids) => {
-        if (live) setPolicyIds(ids);
-      });
-    return () => {
-      live = false;
-    };
-  }, [needsPolicies]);
 
   // The bubble closes itself on the full assistant page, which already shows the conversation.
   useEffect(() => {
@@ -210,7 +192,7 @@ export function AssistantBubble() {
         </header>
         {opened ? (
           <Suspense fallback={<PanelLoading />}>
-            <BubblePanel current={current} onSession={onSession} page={page} policyIds={policyIds} reset={reset} />
+            <BubblePanel current={current} onSession={onSession} page={page} reset={reset} />
           </Suspense>
         ) : null}
       </section>
