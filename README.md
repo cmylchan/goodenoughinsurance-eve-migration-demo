@@ -112,7 +112,9 @@ advisor's GitHub App) and the Marketplace (Neon Postgres).
 
 **https://claims-agent-eve.vercel.app**, signed in with the [test users](#agent-golden-path-on-vercel-from-legacy-agents-to-one-framework) at the top.
 
-Use two browser windows, one normal and one private, so both users are signed in at once. The
+Use two browser windows, one normal and one private, so both users are signed in at once. Two
+private windows won't do: in Chrome, Edge and Firefox they share one sign-in, so signing in as sam
+in one switches the other to sam too (the page then reloads as sam). Two browsers also work. The
 **Demo Guide** in the chat (the compass button) runs every step below and shows a talking point
 under each. The first answer after a quiet period can take a few seconds while the database wakes.
 

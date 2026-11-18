@@ -194,7 +194,7 @@ export function guideChapters(canApprove: boolean): readonly GuideChapter[] {
               id: "durable-request",
               say: "The request is now a durable workflow, not something a server is holding in memory.",
               title: "Have a write left waiting",
-              detail: "As ana, in a private window, ask the Claims Assistant to flag claim 77 and leave it waiting for approval.",
+              detail: "As ana, in a window that doesn't share sam's sign-in (one normal window and one private, or another browser), ask the Claims Assistant to flag claim 77 and leave it waiting for approval.",
             }
           : {
               id: "durable-request",
