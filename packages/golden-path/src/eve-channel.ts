@@ -30,22 +30,34 @@ export const githubActionsEvalRunner = oidc({
 });
 
 /**
- * The CI eval runner acting as a signed-in test user, outside production: the only caller allowed
- * to open a session with tool stubs. Both proofs are needed on the same request: GitHub's OIDC
- * token for this repository, and a session cookie the identity stand-in signed. A browser has no
- * runner token, and the runner alone is nobody, so neither can stub on its own. Production never
- * accepts stubs. A stub only replaces what a tool returns inside that one session: it can't reach
- * data the user couldn't already see, and the real tool doesn't run.
+ * The CI eval runner acting as a signed-in test user. Both proofs are needed on the same request:
+ * GitHub's OIDC token for this repository, and a session cookie the identity stand-in signed. A
+ * browser has no runner token, and the runner alone is nobody in policy_access.
+ *
+ * The session is marked (`evalRunner`), so the agent can tell an eval from a person: on production,
+ * an eval's approval request texts nobody's phone (see agents/claims/agent/channels/eve.ts).
+ *
+ * Outside production it is also the only caller allowed to open a session with tool stubs.
+ * Production never accepts stubs. A stub only replaces what a tool returns inside that one session:
+ * it can't reach data the user couldn't already see, and the real tool doesn't run.
  */
 export const evalRunnerAsTestUser: EveAuthFn = async (request) => {
-  if (process.env.VERCEL_ENV === "production") return null;
-  const user = signedInUser(request);
+  const user = await signedInUser(request);
   if (!user || !(await githubActionsEvalRunner(request))) return null;
-  return { ...user, allowToolStubs: true };
+  const marked = { ...user, attributes: { ...user.attributes, [EVAL_RUNNER]: "true" } };
+  return process.env.VERCEL_ENV === "production" ? marked : { ...marked, allowToolStubs: true };
 };
 
+const EVAL_RUNNER = "evalRunner";
+
+/** True for a session the CI eval runner drives, not a person. */
+export function isEvalRunner(auth: { readonly attributes?: Readonly<Record<string, unknown>> } | null | undefined): boolean {
+  return auth?.attributes?.[EVAL_RUNNER] === "true";
+}
+
 export const goldenPathAuth = (): EveAuthFn[] => [
-  // First, so the runner signed in as a test user gets the stub grant; everyone else falls through.
+  // First, so the runner signed in as a test user is marked (and, outside production, may stub);
+  // everyone else falls through.
   evalRunnerAsTestUser,
   signedInUser,
   githubActionsEvalRunner,

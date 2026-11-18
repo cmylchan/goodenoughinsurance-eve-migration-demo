@@ -1,6 +1,6 @@
 import { eveChannel } from "eve/channels/eve";
 import { call } from "eve/events";
-import { goldenPathAuth } from "@ge/golden-path/eve-channel";
+import { goldenPathAuth, isEvalRunner } from "@ge/golden-path/eve-channel";
 import { postgresPhoneStore, sendApprovalTexts } from "@ge/golden-path/phone";
 
 /** "flag claim 77 (possible duplicate invoice)": what the text says the requester is asking for. */
@@ -25,6 +25,10 @@ export default eveChannel({
     async "interaction.opened"(event, ctx) {
       const { interactionId, request, subject } = event.data;
       if (request.kind !== "approval") return;
+      // On production the evals run against the live demo, and two of them ask to flag a claim.
+      // Their requests must not land on a supervisor's phone. Previews still text them: the
+      // approve-by-text eval needs the text, and preview phones belong to the test database.
+      if (process.env.VERCEL_ENV === "production" && isEvalRunner(ctx.session.auth.current)) return;
       const requesterId = ctx.session.auth.current?.principalId;
       try {
         const asked = "callId" in subject ? call(ctx.view, subject.callId) : undefined;
