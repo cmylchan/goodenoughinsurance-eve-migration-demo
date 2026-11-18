@@ -12,7 +12,7 @@ import {
 } from "eve/events";
 import type { UseEveAgentReturn } from "eve/react";
 import { AlertCircleIcon, BrainIcon, ClockIcon, Loader2Icon, SquareIcon, XIcon } from "lucide-react";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { Suspense, useEffect, useRef, useState } from "react";
 import {
   Conversation,
@@ -32,6 +32,7 @@ import { Trace, TraceIcon, TraceLine, TraceTitle } from "@/components/ui/trace";
 import { cn } from "@/lib/utils";
 import { AgentMessage } from "./agent-message";
 import { hasOpenApproval } from "./open-approval";
+import { useDropStalePageData } from "./page-data-sync";
 import { useAssistant, useViewer } from "./assistant-provider";
 import { DEFAULT_AGENT } from "./chat-agents";
 import { pageContext, suggestionsFor, type PageContext } from "./demo-guide";
@@ -403,11 +404,12 @@ function QueuedMessage({ text, onRemove }: { readonly text: string; readonly onR
 
 /**
  * Pages keep some data in the browser for a short while (the Data page's policies and flags). When
- * this conversation sees a flag written, drop those copies, so the flag shows at once wherever the
- * person looks next. Flags already written when the chat loaded don't trigger it.
+ * this conversation sees a flag written, drop those copies in every tab of this browser, so the
+ * flag shows at once wherever the person looks next. Flags already written when the chat loaded
+ * don't trigger it.
  */
 function useRefreshOnWrite(messages: UseEveAgentReturn["messages"]) {
-  const router = useRouter();
+  const dropStalePageData = useDropStalePageData();
   const seen = useRef<Set<string> | undefined>(undefined);
   const written = messages.flatMap((message) =>
     message.parts.flatMap((part) =>
@@ -426,8 +428,8 @@ function useRefreshOnWrite(messages: UseEveAgentReturn["messages"]) {
     const fresh = ids.filter((id) => !seen.current!.has(id));
     if (fresh.length === 0) return;
     for (const id of fresh) seen.current.add(id);
-    router.refresh();
-  }, [key, router]);
+    dropStalePageData();
+  }, [key, dropStalePageData]);
 }
 
 /** The text of the user's latest message, to send again after a failed turn. */
