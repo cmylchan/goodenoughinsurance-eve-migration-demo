@@ -1,0 +1,1083 @@
+/* Vercel × GoodEnough Home Insurance whitepaper. Letter, portrait. Geist tokens (light theme). */
+
+:root {
+  --gray-100: #f2f2f2;
+  --gray-200: #ebebeb;
+  --gray-300: #e6e6e6;
+  --gray-400: #eaeaea;
+  --gray-500: #c9c9c9;
+  --gray-600: #a8a8a8;
+  --gray-700: #8f8f8f;
+  --gray-800: #7d7d7d;
+  --gray-900: #666666;
+  --gray-1000: #171717;
+  --bg-200: #fafafa;
+  --border: rgba(0, 0, 0, 0.08);
+
+  --blue-100: #f0f7ff;
+  --blue-300: #e0efff;
+  --blue-500: #97ccff;
+  --blue-700: #0070f7;
+  --blue-900: #0064e2;
+  --blue-1000: #002453;
+
+  /* Customer accent: logo, customer side of diagrams, cover lockup only. */
+  --ge-brand: #8a1538;
+  --ge-soft: #f6ecef;
+
+  --font-sans: "Geist", "Helvetica Neue", Arial, sans-serif;
+  --font-mono: "Geist Mono", ui-monospace, Menlo, monospace;
+
+  --page-w: 8.5in;
+  --page-h: 11in;
+  --margin-x: 0.8in;
+}
+
+@page {
+  size: Letter;
+  margin: 0;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+body {
+  margin: 0;
+  background: #d4d4d4;
+  color: var(--gray-1000);
+  font-family: var(--font-sans);
+  font-size: 9.75pt;
+  line-height: 1.55;
+  font-feature-settings: "ss01", "tnum";
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ---------- Page frame ---------- */
+
+.page {
+  position: relative;
+  width: var(--page-w);
+  height: var(--page-h);
+  margin: 24px auto;
+  padding: 0.95in var(--margin-x) 0.85in;
+  background: #fff;
+  overflow: hidden;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06), 0 8px 24px rgba(0, 0, 0, 0.08);
+  break-after: page;
+}
+
+@media print {
+  body {
+    background: #fff;
+  }
+  .page {
+    margin: 0;
+    box-shadow: none;
+  }
+}
+
+.running-header {
+  position: absolute;
+  top: 0.42in;
+  left: var(--margin-x);
+  right: var(--margin-x);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--gray-200);
+  font-family: var(--font-mono);
+  font-size: 7pt;
+  letter-spacing: 0.04em;
+  color: var(--gray-900);
+}
+
+.running-header img {
+  height: 11px;
+  display: block;
+}
+
+.running-footer {
+  position: absolute;
+  bottom: 0.4in;
+  left: var(--margin-x);
+  right: var(--margin-x);
+  display: flex;
+  justify-content: space-between;
+  font-family: var(--font-mono);
+  font-size: 7pt;
+  letter-spacing: 0.04em;
+  color: var(--gray-700);
+}
+
+/* ---------- Type ---------- */
+
+.eyebrow {
+  margin: 0 0 10px;
+  font-family: var(--font-mono);
+  font-size: 7.5pt;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--gray-900);
+}
+
+.eyebrow .num {
+  color: var(--blue-700);
+  margin-right: 8px;
+}
+
+h1 {
+  margin: 0 0 14px;
+  font-size: 25pt;
+  font-weight: 600;
+  line-height: 1.12;
+  letter-spacing: -0.035em;
+  text-wrap: balance;
+}
+
+h2 {
+  margin: 26px 0 8px;
+  font-size: 12.5pt;
+  font-weight: 600;
+  line-height: 1.3;
+  letter-spacing: -0.015em;
+}
+
+h3 {
+  margin: 0 0 4px;
+  font-size: 9.75pt;
+  font-weight: 600;
+  letter-spacing: -0.005em;
+}
+
+p {
+  margin: 0 0 10px;
+  max-width: 6.2in;
+}
+
+.lead {
+  font-size: 12pt;
+  line-height: 1.5;
+  letter-spacing: -0.01em;
+  color: var(--gray-1000);
+  max-width: 6.5in;
+  margin-bottom: 18px;
+  text-wrap: pretty;
+}
+
+.muted {
+  color: var(--gray-900);
+}
+
+.mono {
+  font-family: var(--font-mono);
+  font-size: 0.9em;
+}
+
+code {
+  font-family: var(--font-mono);
+  font-size: 0.86em;
+  padding: 0.5px 4px;
+  border-radius: 4px;
+  background: var(--gray-100);
+  border: 1px solid var(--gray-200);
+  white-space: nowrap;
+}
+
+.estimate-tag {
+  display: inline-block;
+  padding: 1px 6px;
+  border-radius: 999px;
+  border: 1px dashed var(--gray-600);
+  font-family: var(--font-mono);
+  font-size: 6.5pt;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--gray-900);
+  vertical-align: 1px;
+}
+
+/* ---------- Figures ---------- */
+
+figure {
+  margin: 14px 0 18px;
+}
+
+figure svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+figcaption {
+  margin-top: 8px;
+  font-size: 8pt;
+  line-height: 1.45;
+  color: var(--gray-900);
+  max-width: 6.4in;
+}
+
+figcaption strong {
+  color: var(--gray-1000);
+  font-weight: 600;
+}
+
+.card {
+  border: 1px solid var(--gray-200);
+  border-radius: 8px;
+  background: #fff;
+}
+
+/* ---------- Tables ---------- */
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 8.25pt;
+  line-height: 1.42;
+}
+
+th {
+  text-align: left;
+  font-family: var(--font-mono);
+  font-size: 6.75pt;
+  font-weight: 500;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--gray-900);
+  padding: 0 10px 7px 0;
+  border-bottom: 1px solid var(--gray-1000);
+  vertical-align: bottom;
+}
+
+td {
+  padding: 8px 10px 8px 0;
+  border-bottom: 1px solid var(--gray-200);
+  vertical-align: top;
+}
+
+td.k {
+  font-weight: 600;
+}
+
+td.num,
+th.num {
+  font-family: var(--font-mono);
+  font-size: 7.75pt;
+}
+
+/* ---------- Cover ---------- */
+
+.cover {
+  padding: 0;
+  background: #000;
+  color: #fff;
+}
+
+.cover-inner {
+  position: absolute;
+  inset: 0.7in var(--margin-x) 0.7in;
+  display: flex;
+  flex-direction: column;
+}
+
+.lockup {
+  display: flex;
+  align-items: center;
+  gap: 26px; /* clear space = symbol height, per Vercel partner spacing */
+}
+
+.lockup .rule {
+  width: 1px;
+  height: 34px;
+  background: #3d3d3d;
+}
+
+.lockup .vercel {
+  height: 26px;
+  display: block;
+}
+
+.ge-lockup {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.ge-lockup img {
+  width: 30px;
+  height: 30px;
+  display: block;
+}
+
+.ge-wordmark {
+  display: flex;
+  flex-direction: column;
+  line-height: 1;
+}
+
+.ge-wordmark .name {
+  font-family: "Merriweather", Georgia, serif;
+  font-size: 17px;
+  letter-spacing: -0.01em;
+}
+
+.ge-wordmark .sub {
+  margin-top: 4px;
+  font-family: "Lato", var(--font-sans);
+  font-size: 7.5px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: #a1a1a1;
+}
+
+.cover .doc-type {
+  margin-top: 1.25in;
+  font-family: var(--font-mono);
+  font-size: 8pt;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #a1a1a1;
+}
+
+.cover h1 {
+  margin: 14px 0 18px;
+  font-size: 38pt;
+  line-height: 1.04;
+  letter-spacing: -0.045em;
+  max-width: 6.4in;
+}
+
+.cover .subtitle {
+  font-size: 13pt;
+  line-height: 1.45;
+  letter-spacing: -0.01em;
+  color: #a1a1a1;
+  max-width: 5.6in;
+}
+
+.cover-art {
+  position: relative;
+  margin-top: auto;
+  margin-bottom: 0.55in;
+}
+
+.cover-art img {
+  display: block;
+  width: 100%;
+}
+
+.cover-art .label {
+  position: absolute;
+  font-family: var(--font-mono);
+  font-size: 6.5pt;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #8f8f8f;
+}
+
+.cover-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  padding-top: 16px;
+  border-top: 1px solid #262626;
+  font-size: 9pt;
+  line-height: 1.5;
+}
+
+.cover-meta .label {
+  font-family: var(--font-mono);
+  font-size: 6.75pt;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #8f8f8f;
+  margin-bottom: 4px;
+}
+
+.cover-meta .who {
+  font-weight: 600;
+}
+
+.cover-meta .role {
+  color: #a1a1a1;
+}
+
+/* ---------- Executive summary ---------- */
+
+.pov {
+  margin: 4px 0 20px;
+}
+
+.pov th:first-child,
+.pov td:first-child {
+  width: 15%;
+}
+
+.pov td:nth-child(2),
+.pov td:nth-child(3) {
+  width: 30%;
+}
+
+.pov td:last-child {
+  width: 25%;
+}
+
+.pov td.value {
+  font-weight: 500;
+}
+
+.pov .cap {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.pov .cap .idx {
+  font-family: var(--font-mono);
+  font-size: 6.75pt;
+  color: var(--blue-700);
+  letter-spacing: 0.06em;
+}
+
+.pov th .arrow {
+  color: var(--gray-600);
+  margin-left: 4px;
+}
+
+.metrics {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  border: 1px solid var(--gray-200);
+  border-radius: 8px;
+  overflow: hidden;
+  margin-bottom: 18px;
+}
+
+.metric {
+  padding: 12px 14px 13px;
+  border-right: 1px solid var(--gray-200);
+}
+
+.metric:last-child {
+  border-right: 0;
+}
+
+.metric .fig {
+  font-size: 17pt;
+  font-weight: 600;
+  letter-spacing: -0.04em;
+  line-height: 1.1;
+  font-feature-settings: "tnum";
+  white-space: nowrap;
+}
+
+.metric .fig .from {
+  color: var(--gray-700);
+  font-weight: 500;
+}
+
+.metric .fig .to-arrow {
+  color: var(--gray-600);
+  font-weight: 400;
+  margin: 0 3px;
+}
+
+.metric .what {
+  margin-top: 5px;
+  font-size: 7.75pt;
+  line-height: 1.35;
+  color: var(--gray-900);
+}
+
+.metric .estimate-tag {
+  margin-top: 7px;
+}
+
+.metric .measured-tag {
+  display: inline-block;
+  margin-top: 7px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: var(--blue-100);
+  border: 1px solid var(--blue-300);
+  font-family: var(--font-mono);
+  font-size: 6.5pt;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--blue-900);
+}
+
+.ask {
+  display: grid;
+  grid-template-columns: 1.1in 1fr;
+  gap: 16px;
+  padding: 14px 16px;
+  border-radius: 8px;
+  background: var(--gray-1000);
+  color: #fff;
+}
+
+.ask .label {
+  font-family: var(--font-mono);
+  font-size: 7pt;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #a1a1a1;
+  padding-top: 2px;
+}
+
+.ask p {
+  margin: 0;
+  font-size: 10pt;
+  line-height: 1.5;
+}
+
+.ask p + p {
+  margin-top: 6px;
+  color: #a1a1a1;
+  font-size: 8.5pt;
+}
+
+/* ---------- Value section ---------- */
+
+.keyfig {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 18px;
+  align-items: center;
+  padding: 14px 0;
+  border-top: 1px solid var(--gray-200);
+  border-bottom: 1px solid var(--gray-200);
+  margin: 6px 0 4px;
+}
+
+.keyfig .fig {
+  font-size: 30pt;
+  font-weight: 600;
+  letter-spacing: -0.05em;
+  line-height: 1;
+}
+
+.keyfig .fig small {
+  font-size: 12pt;
+  letter-spacing: -0.01em;
+  font-weight: 500;
+  color: var(--gray-900);
+  margin-left: 4px;
+}
+
+.keyfig p {
+  margin: 0;
+  font-size: 9pt;
+  color: var(--gray-900);
+}
+
+.exposure td:nth-child(2) {
+  color: var(--gray-900);
+}
+
+.exposure td:nth-child(3) {
+  font-weight: 600;
+}
+
+.exposure .yes {
+  color: var(--blue-900);
+}
+
+.callout {
+  display: grid;
+  grid-template-columns: 18px 1fr;
+  gap: 10px;
+  padding: 12px 14px;
+  border: 1px solid var(--gray-200);
+  border-radius: 8px;
+  background: var(--bg-200);
+  font-size: 8.5pt;
+  line-height: 1.5;
+}
+
+.callout p {
+  margin: 0;
+  max-width: none;
+}
+
+.callout p + p {
+  margin-top: 6px;
+}
+
+.callout svg {
+  margin-top: 2px;
+}
+
+/* ---------- Stub pages (Phase 1 only) ---------- */
+
+.stub-badge {
+  position: absolute;
+  top: 0.95in;
+  right: var(--margin-x);
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: #fff6e1;
+  border: 1px solid #ffdd84;
+  font-family: var(--font-mono);
+  font-size: 6.75pt;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #a64f00;
+}
+
+.placeholder {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 6px;
+  margin: 18px 0;
+  border: 1px dashed var(--gray-500);
+  border-radius: 8px;
+  background:
+    repeating-linear-gradient(-45deg, transparent 0 9px, rgba(0, 0, 0, 0.025) 9px 10px),
+    var(--bg-200);
+  text-align: center;
+  padding: 20px;
+}
+
+.placeholder .what {
+  font-family: var(--font-mono);
+  font-size: 7pt;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--gray-900);
+}
+
+.placeholder .desc {
+  font-size: 8.5pt;
+  color: var(--gray-900);
+  max-width: 4.6in;
+}
+
+.stub-summary {
+  color: var(--gray-900);
+  font-size: 9.5pt;
+}
+
+.stub-half + .stub-half {
+  margin-top: 0.45in;
+  padding-top: 0.35in;
+  border-top: 1px solid var(--gray-200);
+}
+
+/* ---------- Appendix ---------- */
+
+.appendix h1 {
+  font-size: 20pt;
+}
+
+.fundamentals td:first-child {
+  width: 22%;
+  font-weight: 600;
+}
+
+.fundamentals td:nth-child(2) {
+  width: 28%;
+}
+
+.fundamentals {
+  font-size: 7.9pt;
+  line-height: 1.38;
+}
+
+.fundamentals td {
+  padding-top: 4.5px;
+  padding-bottom: 4.5px;
+}
+
+.two-col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+.two-col .card {
+  padding: 9px 12px;
+  font-size: 8pt;
+  line-height: 1.5;
+}
+
+.two-col .card p {
+  margin: 0;
+}
+
+/* ---------- Co-brand and notices ---------- */
+
+.hdr-ge {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.running-header .hdr-ge img {
+  width: 13px;
+  height: 13px;
+}
+
+.cover-notice {
+  margin: 14px 0 0;
+  max-width: none;
+  font-size: 7pt;
+  line-height: 1.5;
+  color: #8f8f8f;
+}
+
+.cover .cover-art {
+  margin-bottom: 0.4in;
+}
+
+/* ---------- Phase 2 components ---------- */
+
+.cover h1 {
+  font-size: 36pt;
+  max-width: none;
+  text-wrap: wrap;
+}
+
+/* Cost of waiting strip (value page) */
+.wait {
+  margin-top: 24px;
+  border: 1px solid var(--gray-1000);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.wait-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 9px 14px;
+  background: var(--gray-1000);
+  color: #fff;
+  font-size: 9.5pt;
+  font-weight: 600;
+}
+
+.wait-head .estimate-tag {
+  border-color: #8f8f8f;
+  color: #c9c9c9;
+}
+
+.wait-body {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.wait-body > div {
+  padding: 11px 14px 12px;
+  border-right: 1px solid var(--gray-200);
+}
+
+.wait-body > div:last-child {
+  border-right: 0;
+}
+
+.wait .fig {
+  font-size: 17pt;
+  font-weight: 600;
+  letter-spacing: -0.04em;
+  line-height: 1.1;
+}
+
+.wait .what {
+  margin-top: 4px;
+  font-size: 7.75pt;
+  line-height: 1.35;
+  color: var(--gray-900);
+}
+
+/* Problem cards */
+.pains {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.pain {
+  padding: 10px 13px 11px;
+  border: 1px solid var(--gray-200);
+  border-radius: 8px;
+  font-size: 8.25pt;
+  line-height: 1.45;
+}
+
+.pain h3 {
+  display: flex;
+  gap: 7px;
+  align-items: baseline;
+  margin-bottom: 3px;
+  font-size: 9.25pt;
+}
+
+.pain h3 .idx {
+  font-family: var(--font-mono);
+  font-size: 6.75pt;
+  font-weight: 500;
+  color: var(--blue-700);
+}
+
+.pain p {
+  margin: 0;
+  max-width: none;
+}
+
+.pain .cost {
+  margin-top: 5px;
+  color: var(--gray-900);
+}
+
+.pain .cost b {
+  font-family: var(--font-mono);
+  font-size: 6.5pt;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--gray-700);
+  margin-right: 5px;
+}
+
+.pain.dark {
+  background: var(--gray-1000);
+  border-color: var(--gray-1000);
+  color: #fff;
+}
+
+.pain.dark h3 .idx,
+.pain.dark .cost,
+.pain.dark .cost b {
+  color: #a1a1a1;
+}
+
+/* Connect / Replace */
+.cr {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 4px;
+}
+
+.cr .card {
+  padding: 10px 13px 11px;
+  font-size: 8.25pt;
+  line-height: 1.45;
+}
+
+.cr .card p {
+  margin: 0;
+  max-width: none;
+}
+
+.cr .tag {
+  display: inline-block;
+  margin-bottom: 4px;
+  font-family: var(--font-mono);
+  font-size: 6.75pt;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.cr .connect .tag {
+  color: var(--ge-brand);
+}
+
+.cr .replace .tag {
+  color: var(--blue-900);
+}
+
+.stays td:first-child {
+  width: 22%;
+  font-weight: 600;
+}
+
+.stays td {
+  padding-top: 5px;
+  padding-bottom: 5px;
+}
+
+/* Rollout stages */
+.stages {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-top: 6px;
+}
+
+.stage {
+  position: relative;
+  padding: 10px 11px 11px;
+  border: 1px solid var(--blue-500);
+  border-radius: 8px;
+  background: var(--blue-100);
+  font-size: 7.9pt;
+  line-height: 1.4;
+}
+
+.stage + .stage::before {
+  content: "";
+  position: absolute;
+  left: -14px;
+  top: 22px;
+  width: 9px;
+  height: 9px;
+  border-top: 1.5px solid var(--gray-1000);
+  border-right: 1.5px solid var(--gray-1000);
+  transform: rotate(45deg);
+}
+
+.stage .n {
+  font-family: var(--font-mono);
+  font-size: 6.75pt;
+  letter-spacing: 0.06em;
+  color: var(--blue-900);
+}
+
+.stage h3 {
+  margin: 1px 0 5px;
+  font-size: 10pt;
+}
+
+.stage p {
+  margin: 0;
+}
+
+.stage .exit {
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid var(--blue-300);
+  color: var(--gray-900);
+}
+
+.stage .exit b {
+  font-family: var(--font-mono);
+  font-size: 6.5pt;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--gray-700);
+  display: block;
+}
+
+.rollback {
+  display: grid;
+  grid-template-columns: 20px 1fr;
+  gap: 8px;
+  align-items: start;
+  margin-top: 10px;
+  padding: 9px 12px;
+  border: 1px dashed var(--gray-600);
+  border-radius: 8px;
+  font-size: 8pt;
+  line-height: 1.45;
+}
+
+.rollback p {
+  margin: 0;
+  max-width: none;
+}
+
+.risks td:first-child {
+  width: 34%;
+  font-weight: 600;
+}
+
+.risks td {
+  padding-top: 6px;
+  padding-bottom: 6px;
+}
+
+/* Next step */
+.checklist {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px 18px;
+  font-size: 8.5pt;
+  line-height: 1.45;
+}
+
+.checklist li {
+  display: grid;
+  grid-template-columns: 16px 1fr;
+  gap: 7px;
+}
+
+.checklist li::before {
+  content: "";
+  width: 12px;
+  height: 12px;
+  margin-top: 2px;
+  border: 1.25px solid var(--gray-1000);
+  border-radius: 3px;
+}
+
+.section-break {
+  margin-top: 22px;
+  padding-top: 18px;
+  border-top: 1px solid var(--gray-200);
+}
+
+.section-break h1 {
+  font-size: 20pt;
+}
+
+/* Appendix tables */
+.prims td:first-child {
+  width: 19%;
+  font-weight: 600;
+}
+
+.prims td {
+  padding-top: 6px;
+  padding-bottom: 6px;
+  font-size: 7.9pt;
+}
+
+.techm td:first-child {
+  width: 22%;
+  font-weight: 600;
+}
+
+.techm td {
+  padding-top: 5px;
+  padding-bottom: 5px;
+  font-size: 7.9pt;
+}
+
+.prim-strip {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.prim-strip .pname {
+  font-size: 10pt;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.prim-strip {
+  margin-bottom: 0;
+}
+
+.prim-strip .metric {
+  padding: 9px 12px 10px;
+}
