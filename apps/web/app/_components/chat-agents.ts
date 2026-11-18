@@ -38,10 +38,18 @@ export const CHAT_AGENTS: readonly ChatAgent[] = [
   {
     id: "notes-summariser",
     kind: "ai-sdk",
-    label: "Notes Summariser",
+    label: "Notes Summariser (legacy)",
     about: "The fraud portal's read-only notes summary.",
     api: "/api/legacy/notes-summariser",
     legacy: true,
+  },
+  {
+    id: "notes-summariser-hardened",
+    kind: "ai-sdk",
+    label: "Notes Summariser (ToolLoopAgent)",
+    about: "The fraud portal's read-only notes summary, hardened.",
+    api: "/api/notes-summariser",
+    legacy: false,
   },
   {
     id: "reserve-desk",
