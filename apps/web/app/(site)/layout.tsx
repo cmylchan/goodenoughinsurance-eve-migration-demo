@@ -2,6 +2,7 @@ import { LogOutIcon } from "lucide-react";
 import { type ReactNode, Suspense } from "react";
 import { AssistantBubble } from "@/app/_components/assistant-bubble";
 import { AssistantProvider } from "@/app/_components/assistant-provider";
+import { PageDataSync } from "@/app/_components/page-data-sync";
 import { SiteFooter } from "@/app/_components/site-footer";
 import { SiteHeader } from "@/app/_components/site-header";
 import { signOut } from "@/app/login/actions";
@@ -29,6 +30,7 @@ export default function SiteLayout({ children }: { readonly children: ReactNode 
         />
         <div className="flex min-h-0 flex-1 flex-col">{children}</div>
         <SiteFooter />
+        <PageDataSync />
         <Suspense fallback={null}>
           <AssistantBubble />
         </Suspense>

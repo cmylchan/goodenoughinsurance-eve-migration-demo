@@ -13,7 +13,7 @@ import {
 import type { UseEveAgentReturn } from "eve/react";
 import { AlertCircleIcon, BrainIcon, ClockIcon, Loader2Icon, SquareIcon, XIcon } from "lucide-react";
 import { usePathname } from "next/navigation";
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import {
   Conversation,
   ConversationContent,
@@ -32,6 +32,7 @@ import { Trace, TraceIcon, TraceLine, TraceTitle } from "@/components/ui/trace";
 import { cn } from "@/lib/utils";
 import { AgentMessage } from "./agent-message";
 import { hasOpenApproval } from "./open-approval";
+import { useDropStalePageData } from "./page-data-sync";
 import { useAssistant, useViewer } from "./assistant-provider";
 import { DEFAULT_AGENT } from "./chat-agents";
 import { pageContext, suggestionsFor, type PageContext } from "./demo-guide";
@@ -155,6 +156,7 @@ export function EveChatBody({
     (lastMessage?.role !== "assistant" || isPendingAssistantShell);
   const failed = isBusy || isResuming ? undefined : failure(agent.view, turns(agent.view).at(-1)?.turnId);
   const approvalOpen = hasOpenApproval(agent.view);
+  useRefreshOnWrite(agent.messages);
   // A provider's content filter ends the whole turn, and eve drops that message from the history,
   // so a harmless question sent with a blocked one goes unanswered too. Say so, and offer a resend.
   const refused = failed?.code === "MODEL_CALL_FAILED" && /filtered this response|refused this request/i.test(failed.message);
@@ -398,6 +400,36 @@ function QueuedMessage({ text, onRemove }: { readonly text: string; readonly onR
       </MessageContent>
     </Message>
   );
+}
+
+/**
+ * Pages keep some data in the browser for a short while (the Data page's policies and flags). When
+ * this conversation sees a flag written, drop those copies in every tab of this browser, so the
+ * flag shows at once wherever the person looks next. Flags already written when the chat loaded
+ * don't trigger it.
+ */
+function useRefreshOnWrite(messages: UseEveAgentReturn["messages"]) {
+  const dropStalePageData = useDropStalePageData();
+  const seen = useRef<Set<string> | undefined>(undefined);
+  const written = messages.flatMap((message) =>
+    message.parts.flatMap((part) =>
+      part.type === "tool" && part.name === "flag_claim" && (part.output as { written?: boolean } | undefined)?.written === true
+        ? [part.callId]
+        : [],
+    ),
+  );
+  const key = written.join(",");
+  useEffect(() => {
+    const ids = key ? key.split(",") : [];
+    if (seen.current === undefined) {
+      seen.current = new Set(ids);
+      return;
+    }
+    const fresh = ids.filter((id) => !seen.current!.has(id));
+    if (fresh.length === 0) return;
+    for (const id of fresh) seen.current.add(id);
+    dropStalePageData();
+  }, [key, dropStalePageData]);
 }
 
 /** The text of the user's latest message, to send again after a failed turn. */
