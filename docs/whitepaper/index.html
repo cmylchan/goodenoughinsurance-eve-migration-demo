@@ -1,0 +1,808 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>One Golden Path for AI Agents at GoodEnough Home Insurance</title>
+<meta name="author" content="Christopher Chan">
+<meta name="description" content="How GoodEnough Home Insurance can move its AI agents onto one reviewed path on Vercel: the problem, the outcome and the value.">
+<meta name="keywords" content="Vercel, GoodEnough Home Insurance, AI agents, AI Gateway, Vercel Workflow, OIDC, Vault, claims">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&family=Lato:wght@400&family=Merriweather:wght@400&display=block" rel="stylesheet">
+<link rel="stylesheet" href="print.css">
+</head>
+<body>
+
+<!-- ============================== 1. COVER ============================== -->
+<section class="page cover" aria-label="Cover">
+  <div class="cover-inner">
+    <div class="lockup">
+      <img class="vercel" src="assets/vercel-logotype-white.svg" alt="Vercel">
+      <span class="rule" aria-hidden="true"></span>
+      <span class="ge-lockup">
+        <img src="assets/goodenough-mark.svg" alt="">
+        <span class="ge-wordmark">
+          <span class="name">GoodEnough</span>
+          <span class="sub">Home Insurance</span>
+        </span>
+      </span>
+    </div>
+
+    <div class="doc-type">Client-facing Artifact · Interview exercise · November 2026</div>
+    <h1>One Golden Path for<br>AI Agents at<br>GoodEnough Home Insurance</h1>
+    <p class="subtitle">Moving 30 AI agents onto one secure, reviewed release path.</p>
+
+    <div class="cover-art">
+      <img src="assets/cover-art.svg" alt="Thirty separate agents converging onto one reviewed path">
+      <span class="label" style="left: 4%; bottom: -16px;">30 agents, built 30 ways</span>
+      <span class="label" style="left: 68%; top: 37%;">One reviewed path</span>
+    </div>
+
+    <div class="cover-meta">
+      <div>
+        <div class="label">Prepared for</div>
+        <div class="who">GoodEnough Home Insurance</div>
+        <div class="role">Claims Operations, Fraud and Finance leadership</div>
+      </div>
+      <div style="text-align: right;">
+        <div class="label">Prepared by</div>
+        <div class="who">Christopher Chan</div>
+        <div class="role">Candidate, Vercel Solutions Architect interview</div>
+      </div>
+    </div>
+    <p class="cover-notice">This document is a mock prepared for interview purposes. It is not an official Vercel publication, and Vercel has not reviewed or endorsed it. GoodEnough Home Insurance is a fictional company. The Vercel name and logo are trademarks of Vercel, Inc.</p>
+  </div>
+</section>
+
+<!-- ============================== 2. EXECUTIVE SUMMARY ============================== -->
+<section class="page" aria-label="Executive summary">
+  <header class="running-header"><img src="assets/vercel-logotype-black.svg" alt="Vercel"><span class="hdr-ge"><img src="assets/goodenough-mark.svg" alt="GoodEnough Home Insurance logo">Prepared for GoodEnough Home Insurance</span></header>
+
+  <p class="eyebrow"><span class="num">01</span>Executive summary</p>
+  <h1>Executive summary</h1>
+  <p class="lead">GoodEnough Home Insurance runs about 30 AI agents, each built by a different team in its own way. One reviewed path on Vercel would take a new agent from idea to production in an estimated 3 weeks instead of 12, and remove every standing credential the agents hold today.</p>
+
+  <table class="pov" aria-label="Problem, outcome and value for each capability">
+    <thead>
+      <tr><th>Capability</th><th>Problem<span class="arrow">→</span></th><th>Outcome<span class="arrow">→</span></th><th>Value</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><div class="cap"><span class="idx">01</span><strong>No stored passwords</strong></div></td>
+        <td>Agents bypass Vault with static passwords and keys.</td>
+        <td>A per-deployment identity; database access that expires in minutes.</td>
+        <td class="value">Nothing to steal or rotate.</td>
+      </tr>
+      <tr>
+        <td><div class="cap"><span class="idx">02</span><strong>Approvals that hold</strong></div></td>
+        <td>A redeploy loses pending approvals; anyone can say “approved”.</td>
+        <td>A different person approves every change and the request waits until they do, through any update.</td>
+        <td class="value">Every change has a named requester and approver.</td>
+      </tr>
+      <tr>
+        <td><div class="cap"><span class="idx">03</span><strong>One route to AI models</strong></div></td>
+        <td>Each team manages its own keys, and one provider’s outage stops an agent.</td>
+        <td>AI Gateway, with automatic failover between providers.</td>
+        <td class="value">No model keys. No single point of failure.</td>
+      </tr>
+      <tr>
+        <td><div class="cap"><span class="idx">04</span><strong>A gate before release</strong></div></td>
+        <td>Nothing is tested before it goes live.</td>
+        <td>Every version is tested before it can ship.</td>
+        <td class="value">Broken builds can’t ship.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="metrics" role="list" aria-label="Headline measures">
+    <div class="metric" role="listitem">
+      <div class="fig"><span class="from">12</span><span class="to-arrow">→</span>3 wk</div>
+      <div class="what">From an agent idea to production</div>
+      <span class="estimate-tag">Estimate</span>
+    </div>
+    <div class="metric" role="listitem">
+      <div class="fig"><span class="from">3 wk</span><span class="to-arrow">→</span>3 d</div>
+      <div class="what">Security review per agent, in working days</div>
+      <span class="estimate-tag">Estimate</span>
+    </div>
+    <div class="metric" role="listitem">
+      <div class="fig"><span class="from">4</span><span class="to-arrow">→</span>0</div>
+      <div class="what">Standing secrets held by agents</div>
+      <span class="measured-tag">Target</span>
+    </div>
+    <div class="metric" role="listitem">
+      <div class="fig">330–360 wk</div>
+      <div class="what">Delivery and security-review time saved across 30 agents</div>
+      <span class="estimate-tag">Estimate</span>
+    </div>
+  </div>
+
+  <div class="ask">
+    <div class="label">The ask</div>
+    <div>
+      <p><strong>Approve a pilot of the golden path.</strong></p>
+      <p>Two agents move first. The pilot proves the approach on GoodEnough’s own systems and replaces this paper’s estimates with measured results before anything wider is committed.</p>
+    </div>
+  </div>
+
+  <footer class="running-footer"><span>One Golden Path for AI Agents · Interview exercise, not a Vercel publication</span><span>2</span></footer>
+</section>
+
+<!-- ============================== 3. PROBLEM ============================== -->
+<section class="page" aria-label="The problem">
+  <header class="running-header"><img src="assets/vercel-logotype-black.svg" alt="Vercel"><span class="hdr-ge"><img src="assets/goodenough-mark.svg" alt="GoodEnough Home Insurance logo">Prepared for GoodEnough Home Insurance</span></header>
+
+  <p class="eyebrow"><span class="num">02</span>The problem</p>
+  <h1>30 agents, 30 ways of building them</h1>
+  <p class="lead">Today, how fast an agent reaches production depends on its plumbing, not on the business idea behind it. Every team rebuilds the same plumbing, and every agent waits on a security review that starts from scratch.</p>
+
+  <figure style="margin-top: 4px;">
+    <svg viewBox="0 0 660 282" role="img" aria-label="Current state: three teams each run an agent that holds static secrets and its own plumbing. Vault is mandated, but the agents cannot log in to it, so they reach the claims database around it.">
+      <defs>
+        <marker id="cs-a" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L8 4 L0 8 Z" fill="#a64f00"/></marker>
+        <marker id="cs-g" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L8 4 L0 8 Z" fill="#8f8f8f"/></marker>
+      </defs>
+      <!-- GoodEnough systems -->
+      <rect x="452.5" y="0.5" width="207" height="281" rx="10" fill="#f6ecef" stroke="#8a1538" stroke-opacity=".25"/>
+      <image href="assets/goodenough-mark.svg" x="466" y="9" width="13" height="13"/>
+      <text x="484" y="19" font-family="Geist Mono, monospace" font-size="8" letter-spacing=".08em" fill="#8a1538">GOODENOUGH SYSTEMS</text>
+      <rect x="470.5" y="34.5" width="172" height="58" rx="8" fill="#fff" stroke="#8a1538" stroke-opacity=".55"/>
+      <text x="483" y="57" font-family="Geist, sans-serif" font-size="11" font-weight="600" fill="#171717">Vault</text>
+      <text x="483" y="74" font-family="Geist, sans-serif" font-size="8.5" fill="#666">Mandated for dynamic secrets</text>
+      <rect x="470.5" y="192.5" width="172" height="74" rx="8" fill="#fff" stroke="#8a1538" stroke-opacity=".55"/>
+      <text x="483" y="217" font-family="Geist, sans-serif" font-size="11" font-weight="600" fill="#171717">Claims database</text>
+      <text x="483" y="234" font-family="Geist, sans-serif" font-size="8.5" fill="#666">System of record</text>
+
+      <!-- agents -->
+      <g font-family="Geist, sans-serif">
+        <rect x="0.5" y="14.5" width="150" height="76" rx="8" fill="#fff" stroke="#c9c9c9"/>
+        <text x="12" y="36" font-family="Geist Mono, monospace" font-size="7.5" letter-spacing=".06em" fill="#666">CLAIMS OPS</text>
+        <text x="12" y="54" font-size="11" font-weight="600" fill="#171717">Claims Helper</text>
+        <rect x="0.5" y="102.5" width="150" height="76" rx="8" fill="#fff" stroke="#c9c9c9"/>
+        <text x="12" y="124" font-family="Geist Mono, monospace" font-size="7.5" letter-spacing=".06em" fill="#666">FRAUD</text>
+        <text x="12" y="142" font-size="11" font-weight="600" fill="#171717">Notes Summariser</text>
+        <rect x="0.5" y="190.5" width="150" height="76" rx="8" fill="#fff" stroke="#c9c9c9"/>
+        <text x="12" y="212" font-family="Geist Mono, monospace" font-size="7.5" letter-spacing=".06em" fill="#666">FINANCE CLAIMS</text>
+        <text x="12" y="230" font-size="11" font-weight="600" fill="#171717">Reserve Desk</text>
+      </g>
+      <g stroke="#c9c9c9"><line x1="151" y1="52" x2="168" y2="52"/><line x1="151" y1="140" x2="168" y2="140"/><line x1="151" y1="228" x2="168" y2="228"/></g>
+
+      <!-- chips: secrets (amber) and hand-built plumbing (dashed) -->
+      <g font-family="Geist, sans-serif" font-size="8.5">
+        <g fill="#fff6e1" stroke="#ffb200">
+          <rect x="168.5" y="14.5" width="200" height="16" rx="4"/><rect x="168.5" y="33.5" width="200" height="16" rx="4"/>
+          <rect x="168.5" y="131.5" width="200" height="16" rx="4"/>
+          <rect x="168.5" y="190.5" width="200" height="16" rx="4"/><rect x="168.5" y="209.5" width="200" height="16" rx="4"/>
+        </g>
+        <g fill="#fff" stroke="#a8a8a8" stroke-dasharray="3 2">
+          <rect x="168.5" y="52.5" width="200" height="16" rx="4"/><rect x="168.5" y="71.5" width="200" height="16" rx="4"/>
+          <rect x="168.5" y="228.5" width="200" height="16" rx="4"/><rect x="168.5" y="247.5" width="200" height="16" rx="4"/>
+        </g>
+        <g fill="#a64f00">
+          <text x="178" y="26">Static database password</text><text x="178" y="45">Static model key</text>
+          <text x="178" y="143">Static database password</text>
+          <text x="178" y="202">Static database password</text><text x="178" y="221">Static model key</text>
+        </g>
+        <g fill="#666">
+          <text x="178" y="64">Own approval check</text><text x="178" y="83">Own nightly job</text>
+          <text x="178" y="240">Own approval queue</text><text x="178" y="259">Own retry loop</text>
+        </g>
+      </g>
+
+      <!-- blocked path to Vault -->
+      <line x1="372" y1="63" x2="466" y2="63" stroke="#8f8f8f" stroke-dasharray="3 3" marker-end="url(#cs-g)"/>
+      <circle cx="419" cy="63" r="7" fill="#fff" stroke="#8f8f8f"/>
+      <path d="M415.5 59.5 L422.5 66.5 M422.5 59.5 L415.5 66.5" stroke="#666" stroke-width="1.3"/>
+      <text x="556" y="112" font-family="Geist, sans-serif" font-size="8.5" fill="#666" text-anchor="middle">Agents have no identity</text>
+      <text x="556" y="124" font-family="Geist, sans-serif" font-size="8.5" fill="#666" text-anchor="middle">to log in with</text>
+
+      <!-- around Vault -->
+      <g fill="none" stroke="#a64f00" stroke-width="1.25">
+        <path d="M372 32 C 420 32, 420 214, 466 214" marker-end="url(#cs-a)"/>
+        <path d="M372 140 C 420 140, 420 228, 466 228" marker-end="url(#cs-a)"/>
+        <path d="M372 208 C 420 208, 420 242, 466 242" marker-end="url(#cs-a)"/>
+      </g>
+      <text x="420" y="174" font-family="Geist, sans-serif" font-size="8.5" font-weight="600" fill="#a64f00" text-anchor="middle" paint-order="stroke" stroke="#fff" stroke-width="4">around Vault</text>
+    </svg>
+    <figcaption><strong>Vault is mandated, but the agents have no identity to log in with, so each one stores a password and goes around it.</strong> Amber chips are secrets that never change; dashed chips are plumbing each team built for itself. Three of GoodEnough’s agents shown.</figcaption>
+  </figure>
+
+  <div class="pains">
+    <div class="pain"><h3><span class="idx">01</span>Standing credentials</h3><p>Agents hold database passwords and model keys that never change.</p><p class="cost"><b>Cost</b>Exposure on every live agent, around a control GoodEnough mandates.</p></div>
+    <div class="pain"><h3><span class="idx">02</span>Security review from scratch</h3><p>Each agent has its own access rules, and some live only in a prompt.</p><p class="cost"><b>Cost</b>About 3 weeks of review per agent.</p></div>
+    <div class="pain"><h3><span class="idx">03</span>Approvals that disappear</h3><p>Approval queues are hand-built. A redeploy loses a pending approval, and a retry applies a change twice.</p><p class="cost"><b>Cost</b>Claims work redone, or done twice.</p></div>
+    <div class="pain"><h3><span class="idx">04</span>Changes nobody approved</h3><p>One agent accepts the word “approved” from anyone, including text inside a claim note, and records itself as the approver.</p><p class="cost"><b>Cost</b>Changes to claims with no accountable person.</p></div>
+    <div class="pain"><h3><span class="idx">05</span>No release gate</h3><p>Nothing tests an agent before it goes live.</p><p class="cost"><b>Cost</b>A change that breaks a rule reaches production.</p></div>
+    <div class="pain dark"><h3><span class="idx">→</span>Why it matters</h3><p>Every new agent repeats about 12 weeks of plumbing and review. The agents already live carry standing credentials, policyholder identifiers reaching a model, and changes nobody approved.</p></div>
+  </div>
+  <footer class="running-footer"><span>One Golden Path for AI Agents · Interview exercise, not a Vercel publication</span><span>3</span></footer>
+</section>
+
+<!-- ============================== 4. OUTCOME ============================== -->
+<section class="page" aria-label="The outcome">
+  <header class="running-header"><img src="assets/vercel-logotype-black.svg" alt="Vercel"><span class="hdr-ge"><img src="assets/goodenough-mark.svg" alt="GoodEnough Home Insurance logo">Prepared for GoodEnough Home Insurance</span></header>
+
+  <p class="eyebrow"><span class="num">03</span>The outcome</p>
+  <h1>One golden path</h1>
+  <p class="lead">GoodEnough keeps the systems it trusts. Vercel takes over the work every team was rebuilding between an agent and those systems.</p>
+
+  <div class="cr">
+    <div class="card connect"><span class="tag">Connect</span><p>Agents on Vercel use GoodEnough’s existing systems: Vault, the claims database and the identity provider. None of them moves, and nothing is stored on either side.</p></div>
+    <div class="card replace"><span class="tag">Replace</span><p>Vercel takes the place of what every team hand-built: approval queues, retry loops, nightly-job wrappers, model keys and routing, preview environments and a release gate.</p></div>
+  </div>
+
+  <figure style="margin: 10px 0 8px;">
+    <svg viewBox="0 0 660 300" role="img" aria-label="Target state: on Vercel, a release gate, any agent, a platform package, durable approval, a deployment identity and AI Gateway. The deployment identity logs in to GoodEnough's Vault, which issues a database user for minutes. GoodEnough keeps its identity provider and audit log.">
+      <defs>
+        <marker id="ts-k" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L8 4 L0 8 Z" fill="#171717"/></marker>
+        <marker id="ts-b" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L8 4 L0 8 Z" fill="#0070f7"/></marker>
+      </defs>
+      <rect x="0.5" y="0.5" width="401" height="299" rx="10" fill="#f0f7ff" stroke="#cce7ff"/>
+      <text x="14" y="19" font-family="Geist Mono, monospace" font-size="8" letter-spacing=".08em" fill="#0064e2">VERCEL</text>
+      <rect x="440.5" y="0.5" width="219" height="299" rx="10" fill="#f6ecef" stroke="#8a1538" stroke-opacity=".25"/>
+      <image href="assets/goodenough-mark.svg" x="454" y="9" width="13" height="13"/>
+      <text x="472" y="19" font-family="Geist Mono, monospace" font-size="8" letter-spacing=".08em" fill="#8a1538">GOODENOUGH, UNCHANGED</text>
+
+      <line x1="421" y1="8" x2="421" y2="292" stroke="#a8a8a8" stroke-dasharray="2 3"/>
+
+      <g font-family="Geist, sans-serif">
+        <!-- Vercel column 1 -->
+        <rect x="16.5" y="34.5" width="170" height="46" rx="7" fill="#fff" stroke="#97ccff"/>
+        <text x="28" y="54" font-size="10.5" font-weight="600" fill="#171717">Release gate</text>
+        <text x="28" y="70" font-size="8.5" fill="#666">Tests run on every version</text>
+        <rect x="16.5" y="110.5" width="170" height="46" rx="7" fill="#fff" stroke="#0070f7" stroke-width="1.5"/>
+        <text x="28" y="130" font-size="10.5" font-weight="600" fill="#171717">Any agent</text>
+        <text x="28" y="146" font-size="8.5" fill="#666">Read-only or changing records</text>
+        <rect x="16.5" y="196.5" width="170" height="54" rx="7" fill="#fff" stroke="#97ccff"/>
+        <text x="28" y="216" font-size="10.5" font-weight="600" fill="#171717">Durable approval</text>
+        <text x="28" y="231" font-size="8.5" fill="#666">A supervisor approves every</text>
+        <text x="28" y="243" font-size="8.5" fill="#666">change; survives redeploys</text>
+        <!-- Vercel column 2 -->
+        <rect x="214.5" y="34.5" width="170" height="46" rx="7" fill="#fff" stroke="#97ccff"/>
+        <text x="226" y="54" font-size="10.5" font-weight="600" fill="#171717">AI Gateway</text>
+        <text x="226" y="70" font-size="8.5" fill="#666">Every model, with failover</text>
+        <rect x="214.5" y="110.5" width="170" height="46" rx="7" fill="#fff" stroke="#97ccff"/>
+        <text x="226" y="130" font-size="10.5" font-weight="600" fill="#171717">Platform package</text>
+        <text x="226" y="146" font-size="8.5" fill="#666">Shared by every agent</text>
+        <rect x="214.5" y="196.5" width="170" height="46" rx="7" fill="#fff" stroke="#97ccff"/>
+        <text x="226" y="216" font-size="10.5" font-weight="600" fill="#171717">Deployment identity</text>
+        <text x="226" y="232" font-size="8.5" fill="#666">Signed per deployment, never stored</text>
+        <!-- GoodEnough -->
+        <rect x="456.5" y="34.5" width="188" height="46" rx="7" fill="#fff" stroke="#8a1538" stroke-opacity=".55"/>
+        <text x="468" y="54" font-size="10.5" font-weight="600" fill="#171717">Identity provider</text>
+        <text x="468" y="70" font-size="8.5" fill="#666">Who may approve</text>
+        <rect x="456.5" y="110.5" width="188" height="46" rx="7" fill="#fff" stroke="#8a1538" stroke-opacity=".55"/>
+        <text x="468" y="130" font-size="10.5" font-weight="600" fill="#171717">Audit log</text>
+        <text x="468" y="146" font-size="8.5" fill="#666">Who received which credential</text>
+        <rect x="456.5" y="196.5" width="188" height="46" rx="7" fill="#fff" stroke="#8a1538" stroke-opacity=".55"/>
+        <text x="468" y="216" font-size="10.5" font-weight="600" fill="#171717">Vault</text>
+        <text x="468" y="232" font-size="8.5" fill="#666">Issues a database user for minutes</text>
+        <rect x="456.5" y="256.5" width="188" height="32" rx="7" fill="#fff" stroke="#8a1538" stroke-opacity=".55"/>
+        <text x="468" y="276" font-size="10.5" font-weight="600" fill="#171717">Claims database</text>
+      </g>
+
+      <g stroke="#171717" stroke-width="1" fill="none">
+        <line x1="101.5" y1="81" x2="101.5" y2="108" marker-end="url(#ts-k)"/>
+        <line x1="101.5" y1="157" x2="101.5" y2="194" marker-end="url(#ts-k)"/>
+        <line x1="187" y1="133.5" x2="212" y2="133.5" marker-end="url(#ts-k)"/>
+        <line x1="299.5" y1="157" x2="299.5" y2="194" marker-end="url(#ts-k)"/>
+        <path d="M385 206 H 396 V 57.5 H 387" marker-end="url(#ts-k)"/>
+        <line x1="550.5" y1="243" x2="550.5" y2="254" marker-end="url(#ts-k)"/>
+      </g>
+      <line x1="385" y1="226" x2="454" y2="226" stroke="#0070f7" stroke-width="1.75" marker-end="url(#ts-b)"/>
+      <g font-family="Geist, sans-serif" font-size="8" fill="#666" paint-order="stroke" stroke="#f0f7ff" stroke-width="4">
+        <text x="108" y="98">gates</text>
+        <text x="108" y="179">every write</text>
+        <text x="306" y="179">identity</text>
+        <text x="392" y="132" text-anchor="end" transform="rotate(-90 392 132)">authenticates</text>
+      </g>
+      <text x="421" y="219" font-family="Geist, sans-serif" font-size="8.5" font-weight="600" fill="#0064e2" text-anchor="middle" paint-order="stroke" stroke="#fff" stroke-width="4">logs in</text>
+    </svg>
+    <figcaption><strong>Every agent uses one platform package, and the identity Vercel gives each deployment is what opens Vault.</strong> Only short-lived credentials and minimal query results cross into GoodEnough’s network.</figcaption>
+  </figure>
+
+  <h2 style="margin-top: 6px;">What stays with GoodEnough, and why</h2>
+  <table class="stays" aria-label="Systems that stay with GoodEnough">
+    <thead><tr><th>System</th><th>Why it stays</th></tr></thead>
+    <tbody>
+      <tr><td>Vault</td><td>GoodEnough’s root of trust, and already mandated. It needs persistent storage and to be always on.</td></tr>
+      <tr><td>Claims database</td><td>The system of record. No database credential is ever stored on Vercel; Vault issues one per step.</td></tr>
+      <tr><td>Identity provider</td><td>Who a user is, and whether they may approve, comes from GoodEnough’s directory.</td></tr>
+      <tr><td>Audit log</td><td>Remains the record of who received which credential, joined to each agent step.</td></tr>
+    </tbody>
+  </table>
+
+  <h2 style="margin-top: 14px;">Three Vercel capabilities carry it</h2>
+  <div class="metrics prim-strip" role="list" aria-label="Core Vercel capabilities">
+    <div class="metric" role="listitem"><div class="pname">OIDC federation into Vault</div><div class="what">Each deployment proves who it is. No passwords to store, steal or rotate.</div></div>
+    <div class="metric" role="listitem"><div class="pname">Vercel Workflow</div><div class="what">Approvals wait as long as they need and survive every redeploy.</div></div>
+    <div class="metric" role="listitem"><div class="pname">AI Gateway</div><div class="what">One route to every model, with failover and no model keys.</div></div>
+  </div>
+  <footer class="running-footer"><span>One Golden Path for AI Agents · Interview exercise, not a Vercel publication</span><span>4</span></footer>
+</section>
+
+<!-- ============================== 5. VALUE (1/2) ============================== -->
+<section class="page" aria-label="The value, part one">
+  <header class="running-header"><img src="assets/vercel-logotype-black.svg" alt="Vercel"><span class="hdr-ge"><img src="assets/goodenough-mark.svg" alt="GoodEnough Home Insurance logo">Prepared for GoodEnough Home Insurance</span></header>
+
+  <p class="eyebrow"><span class="num">04</span>The value</p>
+  <h1>Return on the platform</h1>
+  <p class="lead">The return comes from time each agent no longer spends on plumbing and security review. Across 30 agents, that is an estimated 330 to 360 weeks.</p>
+
+  <div class="keyfig">
+    <div class="fig">330–360<small>weeks</small></div>
+    <p>Estimated delivery and review time saved across 30 agents: about 9 weeks of delivery and 2 to 3 weeks of security review per agent. <span class="estimate-tag">Estimate</span></p>
+  </div>
+
+  <h2>Time saved as agents move to the golden path</h2>
+  <figure>
+    <svg viewBox="0 0 660 200" role="img" aria-label="Cumulative weeks saved: pilot of 2 agents saves 22 to 24 weeks; 10 agents within two quarters save 110 to 120 weeks; all 30 agents within a year save 330 to 360 weeks.">
+      <defs>
+        <pattern id="hb" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="6" height="6" fill="#0070f7"/><line x1="0" y1="0" x2="0" y2="6" stroke="#fff" stroke-opacity=".3" stroke-width="2"/></pattern>
+        <pattern id="hl" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="6" height="6" fill="#97ccff"/><line x1="0" y1="0" x2="0" y2="6" stroke="#fff" stroke-opacity=".5" stroke-width="2"/></pattern>
+      </defs>
+      <g stroke="#ebebeb" stroke-width="1">
+        <line x1="160" y1="8" x2="160" y2="172"/><line x1="260" y1="8" x2="260" y2="172"/><line x1="360" y1="8" x2="360" y2="172"/><line x1="460" y1="8" x2="460" y2="172"/><line x1="560" y1="8" x2="560" y2="172"/>
+      </g>
+      <g font-family="Geist Mono, monospace" font-size="8.5" fill="#666" text-anchor="middle">
+        <text x="160" y="188">0</text><text x="260" y="188">90</text><text x="360" y="188">180</text><text x="460" y="188">270</text><text x="560" y="188">360 weeks</text>
+      </g>
+      <!-- row labels -->
+      <g font-family="Geist, sans-serif">
+        <text x="0" y="34" font-size="10.5" font-weight="600" fill="#171717">Pilot</text>
+        <text x="0" y="47" font-size="8.5" fill="#666" font-family="Geist Mono, monospace">2 agents</text>
+        <text x="0" y="89" font-size="10.5" font-weight="600" fill="#171717">Within two quarters</text>
+        <text x="0" y="102" font-size="8.5" fill="#666" font-family="Geist Mono, monospace">10 agents</text>
+        <text x="0" y="144" font-size="10.5" font-weight="600" fill="#171717">Within a year</text>
+        <text x="0" y="157" font-size="8.5" fill="#666" font-family="Geist Mono, monospace">All 30 agents</text>
+      </g>
+      <!-- row 1 -->
+      <rect x="160" y="22" width="20" height="26" fill="url(#hb)"/>
+      <rect x="180" y="22" width="4.4" height="26" fill="url(#hl)"/>
+      <rect x="184.4" y="22.5" width="2.3" height="25" fill="none" stroke="#51aeff" stroke-dasharray="3 2"/>
+      <text x="196" y="39" font-family="Geist, sans-serif" font-size="10" font-weight="600" fill="#171717">22–24 weeks</text>
+      <!-- row 2 -->
+      <rect x="160" y="77" width="100" height="26" fill="url(#hb)"/>
+      <rect x="260" y="77" width="22.2" height="26" fill="url(#hl)"/>
+      <rect x="282.2" y="77.5" width="11.1" height="25" fill="none" stroke="#51aeff" stroke-dasharray="3 2"/>
+      <text x="302" y="94" font-family="Geist, sans-serif" font-size="10" font-weight="600" fill="#171717">110–120 weeks</text>
+      <!-- row 3 -->
+      <rect x="160" y="132" width="300" height="26" fill="url(#hb)"/>
+      <rect x="460" y="132" width="66.7" height="26" fill="url(#hl)"/>
+      <rect x="526.7" y="132.5" width="33.3" height="25" fill="none" stroke="#51aeff" stroke-dasharray="3 2"/>
+      <text x="568" y="149" font-family="Geist, sans-serif" font-size="10" font-weight="600" fill="#171717">330–360 weeks</text>
+      <text x="170" y="148.5" font-family="Geist Mono, monospace" font-size="8" fill="#fff" letter-spacing=".06em">DELIVERY TIME · 270</text>
+      <text x="510" y="126" font-family="Geist Mono, monospace" font-size="8" fill="#666" text-anchor="middle" letter-spacing=".06em">SECURITY REVIEW · 60–90</text>
+    </svg>
+    <figcaption><strong>Most of the saving is delivery time, and it grows with every agent moved.</strong> Hatched bars are estimates: about 9 weeks of delivery and 2 to 3 weeks of security review saved per agent, with the dashed segment showing the upper end of the review range. Milestones follow the rollout plan in section 5.</figcaption>
+  </figure>
+
+  <h2>Per agent, before and after</h2>
+  <figure>
+    <svg viewBox="0 0 660 214" role="img" aria-label="Per agent: idea to production falls from 12 weeks to 3; security review from 3 weeks to 3 working days; engineering time on plumbing from 6 engineer-weeks to under 1 week.">
+      <defs>
+        <pattern id="hg" width="5" height="5" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="5" height="5" fill="#f2f2f2"/><line x1="0" y1="0" x2="0" y2="5" stroke="#c9c9c9" stroke-width="1.4"/></pattern>
+        <linearGradient id="fade" x1="0" x2="1"><stop offset="0" stop-color="#0070f7"/><stop offset=".7" stop-color="#0070f7"/><stop offset="1" stop-color="#0070f7" stop-opacity=".15"/></linearGradient>
+      </defs>
+      <g stroke="#ebebeb" stroke-width="1">
+        <line x1="210" y1="4" x2="210" y2="196"/><line x1="305" y1="4" x2="305" y2="196"/><line x1="400" y1="4" x2="400" y2="196"/><line x1="495" y1="4" x2="495" y2="196"/><line x1="590" y1="4" x2="590" y2="196"/>
+      </g>
+      <g font-family="Geist Mono, monospace" font-size="8.5" fill="#666" text-anchor="middle">
+        <text x="210" y="210">0</text><text x="305" y="210">3</text><text x="400" y="210">6</text><text x="495" y="210">9</text><text x="590" y="210">12 weeks</text>
+      </g>
+      <g font-family="Geist, sans-serif">
+        <text x="0" y="28" font-size="10.5" font-weight="600" fill="#171717">Idea to production</text>
+        <text x="0" y="41" font-size="8.5" fill="#666" font-family="Geist Mono, monospace">calendar weeks</text>
+        <text x="0" y="94" font-size="10.5" font-weight="600" fill="#171717">Security review</text>
+        <text x="0" y="107" font-size="8.5" fill="#666" font-family="Geist Mono, monospace">calendar weeks</text>
+        <text x="0" y="160" font-size="10.5" font-weight="600" fill="#171717">Engineering on plumbing</text>
+        <text x="0" y="173" font-size="8.5" fill="#666" font-family="Geist Mono, monospace">engineer-weeks</text>
+      </g>
+      <!-- group 1 -->
+      <rect x="210" y="14" width="380" height="15" fill="url(#hg)" stroke="#c9c9c9"/>
+      <text x="216" y="24.5" font-family="Geist Mono, monospace" font-size="7.5" fill="#4d4d4d" letter-spacing=".06em">TODAY, ASSUMED</text>
+      <text x="597" y="25" font-family="Geist, sans-serif" font-size="10" fill="#666">12 weeks</text>
+      <rect x="210" y="33" width="95" height="15" fill="#0070f7"/>
+      <text x="216" y="43.5" font-family="Geist Mono, monospace" font-size="7.5" fill="#fff" letter-spacing=".06em">TARGET</text>
+      <text x="312" y="44" font-family="Geist, sans-serif" font-size="10" font-weight="600" fill="#171717">3 weeks</text>
+      <!-- group 2 -->
+      <rect x="210" y="80" width="95" height="15" fill="url(#hg)" stroke="#c9c9c9"/>
+      <text x="312" y="91" font-family="Geist, sans-serif" font-size="10" fill="#666">3 weeks</text>
+      <rect x="210" y="99" width="19" height="15" fill="#0070f7"/>
+      <text x="236" y="110" font-family="Geist, sans-serif" font-size="10" font-weight="600" fill="#171717">3 working days</text>
+      <!-- group 3 -->
+      <rect x="210" y="146" width="190" height="15" fill="url(#hg)" stroke="#c9c9c9"/>
+      <text x="407" y="157" font-family="Geist, sans-serif" font-size="10" fill="#666">6 engineer-weeks</text>
+      <rect x="210" y="165" width="31.7" height="15" fill="url(#fade)"/>
+      <text x="249" y="176" font-family="Geist, sans-serif" font-size="10" font-weight="600" fill="#171717">Under 1 week</text>
+    </svg>
+    <figcaption><strong>A new agent reaches production in a quarter of the time.</strong> Today’s figures are assumptions for a regional insurer of GoodEnough’s size; the targets come from a shared platform package and a security review of one standard configuration block with shared tests.</figcaption>
+  </figure>
+
+  <footer class="running-footer"><span>One Golden Path for AI Agents · Interview exercise, not a Vercel publication</span><span>5</span></footer>
+</section>
+
+<!-- ============================== 6. VALUE (2/2) ============================== -->
+<section class="page" aria-label="The value, part two">
+  <header class="running-header"><img src="assets/vercel-logotype-black.svg" alt="Vercel"><span class="hdr-ge"><img src="assets/goodenough-mark.svg" alt="GoodEnough Home Insurance logo">Prepared for GoodEnough Home Insurance</span></header>
+
+  <h2 style="margin-top: 0;">The value accrues one agent at a time</h2>
+  <p>Each migration is one pull request, so value starts with the first agent rather than at the end of a long rollout.</p>
+  <figure>
+    <svg viewBox="0 0 660 78" role="img" aria-label="30 agents: 2 in the pilot, 10 on the golden path within two quarters, all 30 within a year.">
+      <g>
+        <!-- 2 pilot -->
+        <rect x="0" y="4" width="17" height="17" rx="3" fill="#0070f7"/><rect x="22" y="4" width="17" height="17" rx="3" fill="#0070f7"/>
+        <!-- 8 more by two quarters -->
+        <rect x="44" y="4" width="17" height="17" rx="3" fill="#97ccff"/><rect x="66" y="4" width="17" height="17" rx="3" fill="#97ccff"/><rect x="88" y="4" width="17" height="17" rx="3" fill="#97ccff"/><rect x="110" y="4" width="17" height="17" rx="3" fill="#97ccff"/><rect x="132" y="4" width="17" height="17" rx="3" fill="#97ccff"/><rect x="154" y="4" width="17" height="17" rx="3" fill="#97ccff"/><rect x="176" y="4" width="17" height="17" rx="3" fill="#97ccff"/><rect x="198" y="4" width="17" height="17" rx="3" fill="#97ccff"/>
+        <!-- 20 more within a year -->
+        <g fill="#f0f7ff" stroke="#97ccff">
+          <rect x="220.5" y="4.5" width="16" height="16" rx="3"/><rect x="242.5" y="4.5" width="16" height="16" rx="3"/><rect x="264.5" y="4.5" width="16" height="16" rx="3"/><rect x="286.5" y="4.5" width="16" height="16" rx="3"/><rect x="308.5" y="4.5" width="16" height="16" rx="3"/><rect x="330.5" y="4.5" width="16" height="16" rx="3"/><rect x="352.5" y="4.5" width="16" height="16" rx="3"/><rect x="374.5" y="4.5" width="16" height="16" rx="3"/><rect x="396.5" y="4.5" width="16" height="16" rx="3"/><rect x="418.5" y="4.5" width="16" height="16" rx="3"/><rect x="440.5" y="4.5" width="16" height="16" rx="3"/><rect x="462.5" y="4.5" width="16" height="16" rx="3"/><rect x="484.5" y="4.5" width="16" height="16" rx="3"/><rect x="506.5" y="4.5" width="16" height="16" rx="3"/><rect x="528.5" y="4.5" width="16" height="16" rx="3"/><rect x="550.5" y="4.5" width="16" height="16" rx="3"/><rect x="572.5" y="4.5" width="16" height="16" rx="3"/><rect x="594.5" y="4.5" width="16" height="16" rx="3"/><rect x="616.5" y="4.5" width="16" height="16" rx="3"/><rect x="638.5" y="4.5" width="16" height="16" rx="3"/>
+        </g>
+      </g>
+      <g stroke="#c9c9c9" fill="none">
+        <path d="M0 30 v5 H39 v-5"/><path d="M44 30 v5 H215 v-5"/><path d="M220 30 v5 H655 v-5"/>
+      </g>
+      <g font-family="Geist, sans-serif" font-size="9.5">
+        <text x="19.5" y="52" font-weight="600" fill="#171717" text-anchor="middle">Pilot</text>
+        <text x="19.5" y="66" font-family="Geist Mono, monospace" font-size="8" fill="#666" text-anchor="middle">2 agents</text>
+        <text x="129.5" y="52" font-weight="600" fill="#171717" text-anchor="middle">Within two quarters</text>
+        <text x="129.5" y="66" font-family="Geist Mono, monospace" font-size="8" fill="#666" text-anchor="middle">10 agents in total</text>
+        <text x="437.5" y="52" font-weight="600" fill="#171717" text-anchor="middle">Within a year</text>
+        <text x="437.5" y="66" font-family="Geist Mono, monospace" font-size="8" fill="#666" text-anchor="middle">all 30 agents</text>
+      </g>
+    </svg>
+    <figcaption><strong>Read-only agents move first, then agents that change records.</strong> Each square is one of GoodEnough’s agents.</figcaption>
+  </figure>
+
+  <h2>Exposure removed</h2>
+  <p>Alongside the time saved, the golden path removes risks that GoodEnough carries today on every live agent.</p>
+  <table class="exposure" aria-label="Exposure today and with the golden path">
+    <thead><tr><th style="width: 29%;">Measure</th><th style="width: 21%;">Today</th><th style="width: 20%;">Golden path</th><th>What it means for GoodEnough</th></tr></thead>
+    <tbody>
+      <tr><td class="k">Standing secrets held by agents</td><td>4, never rotated</td><td>0</td><td>No password or key to steal, rotate or leak.</td></tr>
+      <tr><td class="k">Lifetime of a database credential</td><td>Indefinite</td><td>One step; 10-minute ceiling</td><td>A leaked credential expires within minutes.</td></tr>
+      <tr><td class="k">Changes with a named requester and a different approver</td><td>0%</td><td>100%</td><td>Every change to a claim traces to two named people.</td></tr>
+      <tr><td class="k">Pending approvals lost in a release</td><td>All of them</td><td>None</td><td>A release never discards a supervisor’s pending decision.</td></tr>
+      <tr><td class="k">Releases tested before going live</td><td>None</td><td>Every release</td><td>A change that breaks a rule cannot be promoted.</td></tr>
+      <tr><td class="k">Incidents involving agent credentials, unapproved changes or exposed policyholder identifiers</td><td>From GoodEnough’s incident log</td><td>0 on migrated agents</td><td>Measured from the incident log, tagged by agent.</td></tr>
+    </tbody>
+  </table>
+
+  <div class="wait" role="group" aria-label="The cost of waiting">
+    <div class="wait-head"><span>The cost of waiting: each new agent built the current way</span><span class="estimate-tag">Estimate</span></div>
+    <div class="wait-body">
+      <div><div class="fig">+9 wk</div><div class="what">Extra delivery time before it reaches production</div></div>
+      <div><div class="fig">+2–3 wk</div><div class="what">Extra security review, started from scratch</div></div>
+      <div><div class="fig">+1</div><div class="what">Migration still owed later, on top of the 30 agents today</div></div>
+    </div>
+  </div>
+
+  <footer class="running-footer"><span>One Golden Path for AI Agents · Interview exercise, not a Vercel publication</span><span>6</span></footer>
+</section>
+
+<!-- ============================== 7. ROLLOUT + NEXT STEP ============================== -->
+<section class="page" aria-label="Path to value and next step">
+  <header class="running-header"><img src="assets/vercel-logotype-black.svg" alt="Vercel"><span class="hdr-ge"><img src="assets/goodenough-mark.svg" alt="GoodEnough Home Insurance logo">Prepared for GoodEnough Home Insurance</span></header>
+
+  <p class="eyebrow"><span class="num">05</span>Path to value</p>
+  <h1>Rollout and risk</h1>
+  <p class="lead">Agents move one at a time, read-only agents first. Each migration is a single pull request with its own exit tests.</p>
+
+  <div class="stages" role="list" aria-label="Rollout stages">
+    <div class="stage" role="listitem"><span class="n">01</span><h3>Preview</h3><p>The migrated agent runs beside the legacy one, on test data only.</p><p class="exit"><b>Exit test</b>Both answer the same prompts.</p></div>
+    <div class="stage" role="listitem"><span class="n">02</span><h3>Validation</h3><p>Shared cases score both agents. Security reviews one configuration block. A supervisor approves a real change.</p><p class="exit"><b>Exit test</b>Every case passes; security signs off.</p></div>
+    <div class="stage" role="listitem"><span class="n">03</span><h3>Canary</h3><p>A Rolling Release sends a small share of traffic, or one pilot team, to the new agent.</p><p class="exit"><b>Exit test</b>No rise in errors or refusals; approvals complete.</p></div>
+    <div class="stage" role="listitem"><span class="n">04</span><h3>Cutover</h3><p>All traffic moves. The legacy agent’s routes are disabled.</p><p class="exit"><b>Exit test</b>A full business day with no fallback to legacy.</p></div>
+  </div>
+  <div class="rollback">
+    <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><path d="M7 4 L3 8 L7 12" fill="none" stroke="#171717" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M3.5 8 H11 a4 4 0 0 1 0 8 H8" fill="none" stroke="#171717" stroke-width="1.5" stroke-linecap="round"/></svg>
+    <p><strong>Rollback at any stage.</strong> Instant Rollback returns to the previous deployment, and pending approvals are not lost. The legacy agent’s access is disabled, not deleted, for two weeks, and one switch stops all changes at once.</p>
+  </div>
+
+  <h2>Risks to plan for</h2>
+  <table class="risks" aria-label="Risks and mitigations">
+    <tbody>
+      <tr><td>eve is a release candidate</td><td>Plan for API changes, and keep the AI SDK paths available as an alternative.</td></tr>
+      <tr><td>Short-lived credentials need watching</td><td>A fault that leaves database users behind makes every agent fail closed. A monitor on leftover users is part of the rollout.</td></tr>
+      <tr><td>Tests reduce risk; they do not remove it</td><td>Models vary run to run, and tests check what an agent says and writes. People still review each preview.</td></tr>
+    </tbody>
+  </table>
+
+  <div class="section-break">
+    <p class="eyebrow"><span class="num">06</span>Next step</p>
+    <h1>Start with two agents</h1>
+    <p>One agent that only reads and one that changes records, so both kinds of migration are proven before the other 28.</p>
+    <ul class="checklist">
+      <li>Replace this paper’s estimates with GoodEnough’s own figures, and agree the targets.</li>
+      <li>Choose the two pilot agents with their owning teams.</li>
+      <li>Configure Vault to trust Vercel’s deployment identity, once.</li>
+      <li>Size function counts, model spend and Vault capacity for 30 agents.</li>
+    </ul>
+  </div>
+  <footer class="running-footer"><span>One Golden Path for AI Agents · Interview exercise, not a Vercel publication</span><span>7</span></footer>
+</section>
+
+<!-- ============================== 8. APPENDIX A ============================== -->
+<section class="page appendix" aria-label="Appendix A">
+  <header class="running-header"><img src="assets/vercel-logotype-black.svg" alt="Vercel"><span class="hdr-ge"><img src="assets/goodenough-mark.svg" alt="GoodEnough Home Insurance logo">Prepared for GoodEnough Home Insurance</span></header>
+
+  <p class="eyebrow"><span class="num">A</span>Appendix</p>
+  <h1>Architecture and Vercel primitives</h1>
+  <p>Three primitives carry the design. Each removes a whole class of work that GoodEnough’s teams were doing alone.</p>
+
+  <figure>
+    <svg viewBox="0 0 660 322" role="img" aria-label="Detailed architecture: on Vercel, a push creates a preview deployment, a Deployment Check runs the tests, and the build is promoted. Agents use the platform package, Vercel Workflow for durable approval, an OIDC token per deployment and AI Gateway with two model providers. The OIDC token logs in to Vault in GoodEnough's private network through Secure Compute; Vault issues a database user for the Postgres claims database.">
+      <defs>
+        <marker id="da-k" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse"><path d="M0 0 L8 4 L0 8 Z" fill="#171717"/></marker>
+        <marker id="da-b" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse"><path d="M0 0 L8 4 L0 8 Z" fill="#0070f7"/></marker>
+      </defs>
+      <rect x="0.5" y="0.5" width="427" height="321" rx="10" fill="#f0f7ff" stroke="#cce7ff"/>
+      <text x="14" y="19" font-family="Geist Mono, monospace" font-size="8" letter-spacing=".08em" fill="#0064e2">VERCEL</text>
+      <rect x="452.5" y="0.5" width="207" height="321" rx="10" fill="#f6ecef" stroke="#8a1538" stroke-opacity=".25"/>
+      <image href="assets/goodenough-mark.svg" x="466" y="9" width="13" height="13"/>
+      <text x="484" y="19" font-family="Geist Mono, monospace" font-size="8" letter-spacing=".08em" fill="#8a1538">GOODENOUGH PRIVATE NETWORK</text>
+
+      <g font-family="Geist, sans-serif">
+        <!-- release pipeline -->
+        <text x="14" y="40" font-family="Geist Mono, monospace" font-size="7.5" letter-spacing=".06em" fill="#666">RELEASE</text>
+        <g fill="#fff" stroke="#97ccff">
+          <rect x="14.5" y="48.5" width="84" height="32" rx="6"/><rect x="120.5" y="48.5" width="84" height="32" rx="6"/><rect x="226.5" y="48.5" width="84" height="32" rx="6"/><rect x="332.5" y="48.5" width="84" height="32" rx="6"/>
+        </g>
+        <g font-size="8.5" font-weight="600" fill="#171717" text-anchor="middle">
+          <text x="56.5" y="68">Git push</text><text x="162.5" y="68">Preview</text><text x="268.5" y="68">Deployment Check</text><text x="374.5" y="68">Production</text>
+        </g>
+        <text x="268.5" y="94" font-size="7.5" fill="#666" text-anchor="middle">tests must pass to promote</text>
+
+        <!-- runtime -->
+        <text x="14" y="122" font-family="Geist Mono, monospace" font-size="7.5" letter-spacing=".06em" fill="#666">RUNTIME</text>
+        <rect x="14.5" y="130.5" width="120" height="50" rx="7" fill="#fff" stroke="#0070f7" stroke-width="1.5"/>
+        <text x="26" y="151" font-size="10" font-weight="600" fill="#171717">Agent</text>
+        <text x="26" y="167" font-size="8.5" fill="#666">eve or AI SDK</text>
+        <rect x="160.5" y="130.5" width="126" height="50" rx="7" fill="#fff" stroke="#97ccff"/>
+        <text x="172" y="151" font-size="10" font-weight="600" fill="#171717">Platform package</text>
+        <text x="172" y="167" font-family="Geist Mono, monospace" font-size="8" fill="#666">@ge/golden-path</text>
+        <rect x="312.5" y="130.5" width="104" height="50" rx="7" fill="#fff" stroke="#97ccff"/>
+        <text x="324" y="151" font-size="10" font-weight="600" fill="#171717">AI Gateway</text>
+        <text x="324" y="167" font-size="8.5" fill="#666">OIDC-authenticated</text>
+        <rect x="14.5" y="214.5" width="120" height="50" rx="7" fill="#fff" stroke="#97ccff"/>
+        <text x="26" y="235" font-size="10" font-weight="600" fill="#171717">Vercel Workflow</text>
+        <text x="26" y="251" font-size="8.5" fill="#666">Durable approval</text>
+        <rect x="160.5" y="214.5" width="126" height="50" rx="7" fill="#fff" stroke="#97ccff"/>
+        <text x="172" y="235" font-size="10" font-weight="600" fill="#171717">OIDC token</text>
+        <text x="172" y="251" font-size="8.5" fill="#666">Signed per deployment</text>
+        <rect x="312.5" y="214.5" width="104" height="50" rx="7" fill="#fff" stroke="#a8a8a8" stroke-dasharray="3 2"/>
+        <text x="324" y="235" font-size="10" font-weight="600" fill="#171717">Model providers</text>
+        <text x="324" y="251" font-size="8.5" fill="#666">Primary + fallback</text>
+
+        <!-- GoodEnough -->
+        <rect x="468.5" y="48.5" width="176" height="40" rx="7" fill="#fff" stroke="#8a1538" stroke-opacity=".55"/>
+        <text x="480" y="66" font-size="10" font-weight="600" fill="#171717">Identity provider</text>
+        <text x="480" y="80" font-size="8" fill="#666">Users, roles, approvers</text>
+        <rect x="468.5" y="130.5" width="176" height="50" rx="7" fill="#fff" stroke="#8a1538" stroke-opacity=".55"/>
+        <text x="480" y="151" font-size="10" font-weight="600" fill="#171717">Vault</text>
+        <text x="480" y="167" font-size="8.5" fill="#666">Bound claims: previews → test data</text>
+        <rect x="468.5" y="214.5" width="176" height="50" rx="7" fill="#fff" stroke="#8a1538" stroke-opacity=".55"/>
+        <text x="480" y="235" font-size="10" font-weight="600" fill="#171717">Postgres claims database</text>
+        <text x="480" y="251" font-size="8.5" fill="#666">One database user per step</text>
+        <rect x="468.5" y="274.5" width="176" height="36" rx="7" fill="#fff" stroke="#8a1538" stroke-opacity=".55"/>
+        <text x="480" y="291" font-size="10" font-weight="600" fill="#171717">Audit log</text>
+        <text x="480" y="303" font-size="8" fill="#666">Every credential issued</text>
+      </g>
+
+      <g stroke="#171717" fill="none">
+        <line x1="99" y1="64.5" x2="118" y2="64.5" marker-end="url(#da-k)"/>
+        <line x1="205" y1="64.5" x2="224" y2="64.5" marker-end="url(#da-k)"/>
+        <line x1="311" y1="64.5" x2="330" y2="64.5" marker-end="url(#da-k)"/>
+        <line x1="135" y1="155.5" x2="158" y2="155.5" marker-end="url(#da-k)"/>
+        <line x1="287" y1="155.5" x2="310" y2="155.5" marker-end="url(#da-k)"/>
+        <line x1="74.5" y1="181" x2="74.5" y2="212" marker-end="url(#da-k)"/>
+        <line x1="223.5" y1="181" x2="223.5" y2="212" marker-end="url(#da-k)"/>
+        <line x1="364.5" y1="181" x2="364.5" y2="212" marker-end="url(#da-k)"/>
+        <line x1="556.5" y1="181" x2="556.5" y2="212" marker-end="url(#da-k)"/>
+      </g>
+      <path d="M223.5 265 V 292 H 458 V 155.5 H 466" fill="none" stroke="#0070f7" stroke-width="1.5" marker-end="url(#da-b)"/>
+      <g font-family="Geist, sans-serif" font-size="7.5" fill="#666" paint-order="stroke" stroke="#f0f7ff" stroke-width="4">
+        <text x="80" y="200">every write</text>
+        <text x="229" y="200">identity</text>
+        <text x="370" y="200">failover</text>
+      </g>
+      <text x="340" y="288" font-family="Geist, sans-serif" font-size="8" font-weight="600" fill="#0064e2" text-anchor="middle" paint-order="stroke" stroke="#f0f7ff" stroke-width="4">logs in through Secure Compute</text>
+      <text x="562" y="200" font-family="Geist, sans-serif" font-size="7.5" fill="#666" paint-order="stroke" stroke="#f6ecef" stroke-width="4">issues a user</text>
+    </svg>
+    <figcaption><strong>No standing credential exists anywhere in the path.</strong> The deployment’s own OIDC token authenticates both AI Gateway and Vault. In production, Vault and Postgres sit in GoodEnough’s private network, reached through Secure Compute.</figcaption>
+  </figure>
+
+  <table class="prims" aria-label="Core Vercel primitives">
+    <thead><tr><th>Primitive</th><th style="width: 30%;">What it does here</th><th style="width: 26%;">Why</th><th>Trade-off</th></tr></thead>
+    <tbody>
+      <tr><td>OIDC federation into Vault</td><td>Vercel signs a token for every deployment. The agent logs in to Vault with it and gets a database user for one step.</td><td>Removes every standing secret. Vault’s bound claims keep previews on test data.</td><td>Vault must be configured once to trust Vercel’s issuer, and be reachable from Vercel.</td></tr>
+      <tr><td>Vercel Workflow, through eve</td><td>Runs each conversation as a durable workflow: sessions, approvals, channels and tests.</td><td>A change that waits days for a person survives restarts and redeploys, with no queue to build.</td><td>eve is a release candidate. Each eve agent is its own service, which counts against function limits. Steps must be idempotent.</td></tr>
+      <tr><td>AI Gateway</td><td>One endpoint for every model, authenticated by the deployment, with a fallback model on another provider.</td><td>No model keys to issue, rotate or leak. One provider’s outage does not take an agent down.</td><td>One more hop, and a dependency on the gateway’s model catalog.</td></tr>
+    </tbody>
+  </table>
+  <footer class="running-footer"><span>One Golden Path for AI Agents · Interview exercise, not a Vercel publication</span><span>8</span></footer>
+</section>
+
+<!-- ============================== 9. APPENDIX A cont. + B ============================== -->
+<section class="page appendix" aria-label="Appendix A continued and Appendix B">
+  <header class="running-header"><img src="assets/vercel-logotype-black.svg" alt="Vercel"><span class="hdr-ge"><img src="assets/goodenough-mark.svg" alt="GoodEnough Home Insurance logo">Prepared for GoodEnough Home Insurance</span></header>
+
+  <h2 style="margin-top: 0;">Supporting primitives</h2>
+  <table class="prims" aria-label="Supporting Vercel primitives">
+    <thead><tr><th>Primitive</th><th style="width: 46%;">What it does here</th><th>Trade-off</th></tr></thead>
+    <tbody>
+      <tr><td>Preview deployments and Deployment Checks</td><td>Every push gets a deployment, and the test suite runs against it: all 21 tests on a preview, and the 15 that neither write nor need test data on a production build. The result is a required check before promotion.</td><td>Adds minutes to each release. Three tests are graded by a model, so they can vary; they run on previews only.</td></tr>
+      <tr><td>AI SDK (<code>ToolLoopAgent</code>, <code>WorkflowAgent</code>)</td><td>Paths for agents that should not move to eve: a read-only, one-request agent stays simple, and an agent inside an existing app keeps its routes and UI.</td><td>Three paths to support, not one.</td></tr>
+      <tr><td>Deployment Protection with Trusted Sources</td><td>Previews are private. CI reaches them by proving identity, not with a bypass secret.</td><td>More moving parts when a request is refused.</td></tr>
+      <tr><td>Vercel Connect, the eve sandbox, the Marketplace</td><td>A GitHub App with no stored key; legacy code is read in the sandbox and never run; Neon Postgres from the Marketplace.</td><td>None significant for the design.</td></tr>
+    </tbody>
+  </table>
+
+  <div class="section-break">
+    <p class="eyebrow"><span class="num">B</span>Appendix</p>
+    <h1>Technical success measures</h1>
+    <p>Today’s values describe three agents built the way GoodEnough’s teams build them now.</p>
+    <table class="techm" aria-label="Technical success measures">
+      <thead><tr><th>Measure</th><th style="width: 22%;">Today</th><th style="width: 26%;">Target</th><th>How it is measured</th></tr></thead>
+      <tbody>
+        <tr><td>Standing secrets held by agents</td><td>4 (3 database passwords, 1 model key shared by 2 agents), never rotated</td><td>0</td><td>Secret-valued variables on agent projects</td></tr>
+        <tr><td>Lifetime of a database credential</td><td>Indefinite</td><td>Revoked at the end of each step; 5-minute default, 10-minute ceiling; none while a change waits</td><td>Vault lease TTLs and audit log</td></tr>
+        <tr><td>Changes with a named requester and a different approver</td><td>0%</td><td>100%</td><td><code>requested_by</code> ≠ <code>approved_by</code> on each change</td></tr>
+        <tr><td>Pending approvals lost across a deploy</td><td>All</td><td>0</td><td>Approve-after-redeploy test each release</td></tr>
+        <tr><td>Tests passed before promotion</td><td>No gate</td><td>21 of 21 on the preview; 15 of 15 on the production build</td><td>Deployment Check status</td></tr>
+        <tr><td>Database users left after a step</td><td>Not tracked</td><td>0, with an alert above 0</td><td>Vault-issued roles in Postgres</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <footer class="running-footer"><span>One Golden Path for AI Agents · Interview exercise, not a Vercel publication</span><span>9</span></footer>
+</section>
+
+<!-- ============================== 10. APPENDIX C (1/2) ============================== -->
+<section class="page appendix" aria-label="Appendix C, part one">
+  <header class="running-header"><img src="assets/vercel-logotype-black.svg" alt="Vercel"><span class="hdr-ge"><img src="assets/goodenough-mark.svg" alt="GoodEnough Home Insurance logo">Prepared for GoodEnough Home Insurance</span></header>
+
+  <p class="eyebrow"><span class="num">C</span>Appendix</p>
+  <h1>Web application performance</h1>
+  <p>Adjusters and supervisors reach the agents through a web application on Vercel. This appendix covers the Next.js and Vercel fundamentals that make it fast to load, and where each is configured.</p>
+
+  <h2>Partial prerendering</h2>
+  <p>Every page is split in two at build time. A static shell is built once and served from Vercel’s CDN, so it arrives before any function runs; whatever depends on the request streams into the same response when it is ready.</p>
+
+  <figure>
+    <svg viewBox="0 0 660 252" role="img" aria-label="Sequence: the browser requests a page; the Vercel CDN returns the static shell at once; a Vercel Function renders the dynamic parts and streams the signed-in user and the policy table into place.">
+      <defs>
+        <marker id="ah" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L8 4 L0 8 Z" fill="#171717"/></marker>
+        <marker id="ahb" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L8 4 L0 8 Z" fill="#0070f7"/></marker>
+      </defs>
+      <!-- lane heads -->
+      <g font-family="Geist Mono, monospace" font-size="8.5" text-anchor="middle" letter-spacing=".04em">
+        <rect x="0.5" y="0.5" width="100" height="26" rx="6" fill="#fff" stroke="#c9c9c9"/>
+        <text x="50.5" y="17" fill="#171717">BROWSER</text>
+        <rect x="165.5" y="0.5" width="100" height="26" rx="6" fill="#f0f7ff" stroke="#97ccff"/>
+        <text x="215.5" y="17" fill="#002453">VERCEL CDN</text>
+        <rect x="320.5" y="0.5" width="120" height="26" rx="6" fill="#f0f7ff" stroke="#97ccff"/>
+        <text x="380.5" y="17" fill="#002453">VERCEL FUNCTION</text>
+      </g>
+      <g stroke="#c9c9c9" stroke-dasharray="2 3">
+        <line x1="50.5" y1="27" x2="50.5" y2="246"/><line x1="215.5" y1="27" x2="215.5" y2="246"/><line x1="380.5" y1="27" x2="380.5" y2="246"/>
+      </g>
+      <g font-family="Geist, sans-serif" font-size="9" paint-order="stroke" stroke="#fff" stroke-width="4" stroke-linejoin="round">
+        <!-- 1 -->
+        <line x1="52" y1="56" x2="212" y2="56" stroke="#171717" stroke-width="1" marker-end="url(#ah)"/>
+        <text x="133" y="50" text-anchor="middle" fill="#171717">GET /data</text>
+        <!-- 2 -->
+        <line x1="214" y1="92" x2="54" y2="92" stroke="#171717" stroke-width="2" marker-end="url(#ah)"/>
+        <text x="133" y="86" text-anchor="middle" fill="#171717" font-weight="600">Static shell</text>
+        <text x="133" y="106" text-anchor="middle" fill="#666" font-size="8">header, copy, skeletons</text>
+        <!-- 3 -->
+        <line x1="217" y1="130" x2="377" y2="130" stroke="#171717" stroke-width="1" marker-end="url(#ah)"/>
+        <text x="298" y="124" text-anchor="middle" fill="#171717">Render the dynamic parts</text>
+        <!-- 4 -->
+        <line x1="379" y1="172" x2="54" y2="172" stroke="#0070f7" stroke-width="1.5" marker-end="url(#ahb)"/>
+        <text x="298" y="166" text-anchor="middle" fill="#0064e2">Signed-in user, streamed in</text>
+        <!-- 5 -->
+        <line x1="379" y1="212" x2="54" y2="212" stroke="#0070f7" stroke-width="1.5" marker-end="url(#ahb)"/>
+        <text x="298" y="206" text-anchor="middle" fill="#0064e2">Policy table, streamed in</text>
+      </g>
+      <text x="215.5" y="250" font-family="Geist Mono, monospace" font-size="7.5" fill="#8f8f8f" text-anchor="middle" letter-spacing=".08em">TIME RUNS DOWNWARD</text>
+
+      <!-- wireframe -->
+      <g>
+        <rect x="480.5" y="0.5" width="178" height="246" rx="8" fill="#fff" stroke="#c9c9c9"/>
+        <rect x="492" y="12" width="155" height="14" rx="3" fill="#ebebeb"/>
+        <rect x="492" y="38" width="110" height="10" rx="2" fill="#c9c9c9"/>
+        <rect x="492" y="54" width="150" height="5" rx="2" fill="#ebebeb"/>
+        <rect x="492" y="63" width="128" height="5" rx="2" fill="#ebebeb"/>
+        <rect x="492.5" y="78.5" width="154" height="44" rx="5" fill="#f0f7ff" stroke="#0070f7" stroke-dasharray="3 2"/>
+        <text x="569.5" y="104" font-family="Geist Mono, monospace" font-size="7.5" fill="#0064e2" text-anchor="middle" letter-spacing=".06em">SIGNED-IN USER</text>
+        <rect x="492" y="134" width="150" height="5" rx="2" fill="#ebebeb"/>
+        <rect x="492.5" y="148.5" width="154" height="70" rx="5" fill="#f0f7ff" stroke="#0070f7" stroke-dasharray="3 2"/>
+        <text x="569.5" y="187" font-family="Geist Mono, monospace" font-size="7.5" fill="#0064e2" text-anchor="middle" letter-spacing=".06em">POLICY TABLE</text>
+        <rect x="492" y="230" width="155" height="8" rx="2" fill="#ebebeb"/>
+      </g>
+    </svg>
+    <figcaption><strong>The page paints from the CDN before any function runs; personal data fills in behind it.</strong> In the page on the right, gray blocks are the prerendered shell and dashed blue blocks stream in at request time. Each skeleton is the size of what replaces it, so nothing shifts.</figcaption>
+  </figure>
+
+  <p>All nine pages are partially prerendered, and none is rendered entirely on demand. A signed-in site would normally give this up, because reading a cookie makes the whole page dynamic. Here the cookie is read only inside the streamed parts, so personal pages still get a cached first paint.</p>
+
+  <table aria-label="Prerendered shell and streamed content by page">
+    <thead><tr><th style="width: 18%;">Page</th><th style="width: 38%;">Prerendered shell</th><th>Streams in at request time</th></tr></thead>
+    <tbody>
+      <tr><td class="k">Home</td><td>Header, hero, page copy</td><td>Account card, suggested next steps</td></tr>
+      <tr><td class="k">Assistant</td><td>Page frame and chat skeleton</td><td>The viewer and their conversation</td></tr>
+      <tr><td class="k">Data</td><td>Headings and table skeleton</td><td>Policy records the viewer may see</td></tr>
+      <tr><td class="k">Phone</td><td>Explainer and phone skeleton</td><td>The phone, with its owner’s name and text messages</td></tr>
+      <tr><td class="k">Document pages</td><td>Page frame</td><td>The document, from a cache</td></tr>
+      <tr><td class="k">Sign-in</td><td>The whole form</td><td>Only a check that sends a signed-in visitor home</td></tr>
+    </tbody>
+  </table>
+
+  <footer class="running-footer"><span>One Golden Path for AI Agents · Interview exercise, not a Vercel publication</span><span>10</span></footer>
+</section>
+
+<!-- ============================== 11. APPENDIX C (2/2) + D ============================== -->
+<section class="page appendix" aria-label="Appendix C, part two, and Appendix D">
+  <header class="running-header"><img src="assets/vercel-logotype-black.svg" alt="Vercel"><span class="hdr-ge"><img src="assets/goodenough-mark.svg" alt="GoodEnough Home Insurance logo">Prepared for GoodEnough Home Insurance</span></header>
+
+  <h2 style="margin-top: 0;">The other fundamentals</h2>
+  <table class="fundamentals" aria-label="Next.js and Vercel fundamentals">
+    <thead><tr><th>Fundamental</th><th>Configured in</th><th>What it buys</th></tr></thead>
+    <tbody>
+      <tr><td>Streaming</td><td><code>&lt;Suspense&gt;</code> in the layout and each page</td><td>The slowest query never holds up the rest of the page.</td></tr>
+      <tr><td><code>use cache</code> and cache lifetimes</td><td><code>lib/readme.ts</code>, <code>site-footer.tsx</code></td><td>Documents are cached and refreshed in the background every five minutes. A visitor never waits on GitHub, and an edit needs no redeploy.</td></tr>
+      <tr><td>Partial prefetching</td><td><code>partialPrefetching</code></td><td>A link in view prefetches only the next page’s static shell, so a tap paints at once and no function runs for a page nobody opens.</td></tr>
+      <tr><td>Routing Middleware</td><td><code>proxy.ts</code></td><td>The sign-in check runs before any page renders.</td></tr>
+      <tr><td>Vercel Functions with Fluid compute</td><td>Every route handler and both agent services</td><td>Replies stream for as long as they need. Routes share functions, which keeps the project within its plan’s function count.</td></tr>
+      <tr><td>Code splitting</td><td><code>next/dynamic</code> in the assistant</td><td>The chat client, markdown renderer and code highlighter load after the page is interactive.</td></tr>
+      <tr><td><code>next/font</code></td><td><code>app/layout.tsx</code></td><td>Fonts are self-hosted with size-matched fallbacks, so text does not shift when they load.</td></tr>
+      <tr><td>React Compiler</td><td><code>reactCompiler</code></td><td>A streaming chat reply re-renders only the message that changed.</td></tr>
+      <tr><td>Speed Insights and Web Analytics</td><td><code>app/layout.tsx</code></td><td>Core Web Vitals from real visits, by page and device: the measure of record for speed.</td></tr>
+      <tr><td>File tracing</td><td><code>outputFileTracingIncludes</code></td><td>Each document ships with its function, so it still renders if GitHub is unreachable.</td></tr>
+    </tbody>
+  </table>
+  <p class="muted" style="font-size: 7.5pt; margin: 4px 0 0;">Paths are relative to <code>apps/web</code>; flags are set in <code>next.config.ts</code>.</p>
+
+  <h2 style="margin-top: 16px;">A smaller first load</h2>
+  <figure style="margin-top: 6px;">
+    <svg viewBox="0 0 660 66" role="img" aria-label="JavaScript needed before the page responds fell from about 957 KB to 250 KB compressed.">
+      <g font-family="Geist, sans-serif">
+        <text x="0" y="17" font-size="10" font-weight="600" fill="#171717">Before</text>
+        <rect x="80" y="5" width="460" height="16" fill="#c9c9c9"/>
+        <text x="548" y="17" font-size="10" fill="#666">957 KB</text>
+        <text x="0" y="47" font-size="10" font-weight="600" fill="#171717">After</text>
+        <rect x="80" y="35" width="120" height="16" fill="#0070f7"/>
+        <text x="208" y="47" font-size="10" font-weight="600" fill="#171717">250 KB</text>
+        <text x="270" y="47" font-family="Geist Mono, monospace" font-size="8" fill="#666" letter-spacing=".04em">−74%</text>
+      </g>
+    </svg>
+    <figcaption><strong>Code splitting cut the JavaScript a page needs before it responds by about three quarters.</strong> Compressed sizes on the Home, Data and Phone pages, from production builds before and after the change.</figcaption>
+  </figure>
+
+  <div class="two-col">
+    <div class="card"><h3>Measured</h3><p>JavaScript sizes from production builds. Layout at phone width in a browser and in Safari on an iPhone simulator.</p></div>
+    <div class="card"><h3>Not yet measured</h3><p>Load time on a real phone or a slow network. Speed Insights on the live site is where those numbers come from.</p></div>
+  </div>
+
+  <div style="margin-top: 16px; padding-top: 12px; border-top: 1px solid #ebebeb;">
+    <p class="eyebrow"><span class="num">D</span>Appendix · Notes and assumptions</p>
+    <p style="font-size: 8.5pt; max-width: none;">This paper is a mock prepared for a Vercel Solutions Architect interview. It is not an official Vercel publication, and Vercel has not reviewed or endorsed its content, figures or recommendations. GoodEnough Home Insurance is a fictional customer, and all data in this paper and its supporting build is synthetic. Technical baselines describe three agents built the way GoodEnough’s teams build them today. Business baselines are assumptions for a regional insurer of this size; the first week of the engagement replaces them with GoodEnough’s own figures.</p>
+  </div>
+
+  <footer class="running-footer"><span>One Golden Path for AI Agents · Interview exercise, not a Vercel publication</span><span>11</span></footer>
+</section>
+
+<script>
+  // ?page=N shows a single page, for rendering PNGs.
+  const n = new URLSearchParams(location.search).get("page");
+  if (n) {
+    document.querySelectorAll(".page").forEach((p, i) => { if (i + 1 !== Number(n)) p.remove(); });
+    document.body.style.background = "#fff";
+    document.querySelector(".page").style.margin = "0";
+    document.querySelector(".page").style.boxShadow = "none";
+  }
+</script>
+</body>
+</html>
