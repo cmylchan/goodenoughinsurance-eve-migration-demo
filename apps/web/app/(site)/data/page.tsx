@@ -1,10 +1,12 @@
 import { CarIcon, DatabaseIcon, FlagIcon, HomeIcon, LockIcon, PlaneIcon, ShieldAlertIcon, type LucideIcon } from "lucide-react";
 import type { Metadata } from "next";
+import { cacheLife } from "next/cache";
+import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import { AskAssistantButton } from "@/app/_components/ask-assistant-button";
-import { findUser } from "@lib/identity";
-import { policiesFor, type FlagSummary } from "@/lib/policies";
-import { requireViewer } from "@/lib/session";
+import { findUser, SESSION_COOKIE, verifySession } from "@lib/identity";
+import { policiesFor, type FlagSummary, type PolicyList } from "@/lib/policies";
 
 export const metadata: Metadata = { title: "Data · GoodEnough Insurance" };
 
@@ -16,8 +18,9 @@ const PRODUCTS: Readonly<Record<string, { label: string; icon: LucideIcon }>> = 
 
 const titleCase = (value: string) => value.charAt(0).toUpperCase() + value.slice(1);
 
-// The heading and explainer prerender; the table is read per request with a short-lived database
-// user, so it streams in behind a skeleton the same shape as the table.
+// The heading and explainer prerender. The table is read with a short-lived database user and kept
+// in this browser's memory only (see myPolicies), so the nav link's prefetch brings it along and
+// opening Data shows it at once; a direct visit streams it in behind a skeleton of the same shape.
 export default function DataPage() {
   return (
     <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-12 sm:px-6 md:py-16">
@@ -39,8 +42,15 @@ export default function DataPage() {
 }
 
 async function ViewerName() {
-  const viewer = await requireViewer();
-  return <>, {viewer.displayName}.</>;
+  const name = await myName();
+  return <>{name ? `, ${name}.` : "."}</>;
+}
+
+/** The signed-in user's name, cached privately like the table so the heading is ready with it. */
+async function myName(): Promise<string | undefined> {
+  "use cache: private";
+  cacheLife({ stale: 30, revalidate: 30, expire: 300 });
+  return verifySession((await cookies()).get(SESSION_COOKIE)?.value)?.displayName;
 }
 
 /** Who a flag names: a person from the directory, or whatever else wrote the row. */
@@ -128,9 +138,30 @@ function PolicyTableSkeleton() {
   );
 }
 
+/**
+ * The signed-in user's policies and flags, cached privately: in the browser's memory for this
+ * session only, never in a server cache, so the data still lives only in the customer's database
+ * between visits. Because it reads the session cookie through a private cache, the route's App
+ * Shell includes it, and the ordinary prefetch of the nav link loads it before the click.
+ * Kept 30 seconds (the shortest a prefetch allows); the chat refreshes it as soon as it sees a
+ * flag written, and signing in or out clears it. An unavailable read isn't kept at all.
+ */
+async function myPolicies(): Promise<PolicyList | undefined> {
+  "use cache: private";
+  const user = verifySession((await cookies()).get(SESSION_COOKIE)?.value);
+  if (!user) {
+    cacheLife("seconds");
+    return undefined;
+  }
+  const list = await policiesFor(user.id, { withFlags: true });
+  if (list.ok) cacheLife({ stale: 30, revalidate: 30, expire: 300 });
+  else cacheLife("seconds");
+  return list;
+}
+
 async function PolicyTable() {
-  const viewer = await requireViewer();
-  const list = await policiesFor(viewer.id, { withFlags: true });
+  const list = await myPolicies();
+  if (!list) redirect("/login");
 
   return (
     <>
@@ -195,8 +226,8 @@ async function PolicyTable() {
             <DatabaseIcon className="mt-px size-3.5 shrink-0" />
             <span>
               {list.policies.length} {list.policies.length === 1 ? "policy" : "policies"} from{" "}
-              <code>{list.database}</code>, read with a database user Vault issued for this page load and revoked
-              before it rendered. Which policies you see comes from <code>policy_access</code> on the server. Policies
+              <code>{list.database}</code>, read with a database user Vault issued for this read and revoked as
+              soon as the page was sent. Which policies you see comes from <code>policy_access</code> on the server. Policies
               outside your scope aren&apos;t listed or counted.
             </span>
           </p>
