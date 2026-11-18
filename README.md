@@ -25,6 +25,9 @@ the platform team's answer, shown as two demos:
 
 Everything here is synthetic. There are no real people, policies or claims.
 
+**Diagrams for presenting** (before, after, components and value stream for each use case) are in
+[docs/diagrams](docs/diagrams/README.md).
+
 ## Identifying the pain
 
 GoodEnough already mandates Vault for database credentials. Every team that built an agent before
