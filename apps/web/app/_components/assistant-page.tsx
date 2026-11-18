@@ -9,6 +9,7 @@ import { AgentSwitcher } from "./agent-switcher";
 import { AiSdkChat } from "./ai-sdk-chat";
 import { useAssistant, useViewer } from "./assistant-provider";
 import { agentHref, chatAgent, DEFAULT_AGENT } from "./chat-agents";
+import { chatHistoryKey, clearChat } from "./chat-history";
 import { EveAgentChat } from "./eve-agent-chat";
 import { GuidePanel } from "./guide-panel";
 
@@ -41,8 +42,9 @@ export function AssistantPage({
 
   const showNewChat = isClaims ? sessionId !== undefined : agent.kind === "eve" ? otherSession !== undefined : agent.kind === "ai-sdk";
   const startNewChat = () => {
-    if (isClaims) newChat();
-    else setReset((value) => value + 1);
+    if (isClaims) return newChat();
+    if (agent.kind === "ai-sdk") clearChat(chatHistoryKey(agent.id, viewer.id));
+    setReset((value) => value + 1);
   };
 
   return (

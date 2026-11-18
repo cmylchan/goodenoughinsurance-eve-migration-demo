@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { clearAllChats } from "./chat-history";
 
 // Every tab of a browser profile shares one session cookie, and so do all private windows of
 // Chrome, Edge and Firefox. Signing in as someone else anywhere quietly changes who every open tab
@@ -67,7 +68,10 @@ export function AnnounceSignedOut() {
     fetch("/api/session", { cache: "no-store" })
       .then((response) => (response.ok ? (response.json() as Promise<Announcement>) : undefined))
       .then((session) => {
-        if (session) announce(session.user);
+        if (!session) return;
+        // Signed out: forget every conversation this browser kept, for every user.
+        if (session.user === null) clearAllChats();
+        announce(session.user);
       })
       .catch(() => {});
   }, []);

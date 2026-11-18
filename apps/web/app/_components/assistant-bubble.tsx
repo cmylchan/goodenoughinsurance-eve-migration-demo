@@ -12,6 +12,7 @@ import { cn } from "@/lib/utils";
 import { AssistantIcon } from "./assistant-icon";
 import { isAssistantPage, useAssistant } from "./assistant-provider";
 import { agentHref, CHAT_AGENTS, chatAgent, DEFAULT_AGENT, GUIDE_AGENT } from "./chat-agents";
+import { chatHistoryKey, clearChat } from "./chat-history";
 import { pageContext } from "./demo-guide";
 import { assignedPolicyIds } from "./policy-actions";
 
@@ -36,7 +37,7 @@ function PanelLoading() {
  */
 export function AssistantBubble() {
   const pathname = usePathname();
-  const { agent: claims, bubbleOpen, setBubbleOpen, bubbleAgent, setBubbleAgent, newChat, sessionId } = useAssistant();
+  const { agent: claims, bubbleOpen, setBubbleOpen, bubbleAgent, setBubbleAgent, newChat, sessionId, viewerPromise } = useAssistant();
   const onAssistantPage = isAssistantPage(pathname);
   // Widened in place so a table in the conversation can show more columns, without leaving the page.
   const [wide, setWide] = useState(false);
@@ -170,7 +171,15 @@ export function AssistantBubble() {
           {showNewChat ? (
             <Button
               aria-label="Start a new chat"
-              onClick={() => (isClaims ? newChat() : setReset((value) => value + 1))}
+              onClick={() => {
+                if (isClaims) return newChat();
+                if (current.kind !== "ai-sdk") return setReset((value) => value + 1);
+                // Forget the stored conversation first, so the fresh chat doesn't load it back.
+                void viewerPromise.then((viewer) => {
+                  clearChat(chatHistoryKey(current.id, viewer.id));
+                  setReset((value) => value + 1);
+                });
+              }}
               size="icon-sm"
               title="New chat"
               variant="ghost"
