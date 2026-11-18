@@ -212,7 +212,9 @@ npm run evals:compare -- --url https://<deployment-url>
 
 **Before and after a session** run [`infra/reset.sh`](infra/reset.sh). It revokes leftover database
 users, reseeds both databases, turns writes back on, checks Vault can issue a working reader, and
-closes open `migration/*` pull requests. Its header says what it needs.
+closes open `migration/*` pull requests. Every browser also starts its chats fresh on its next page
+load. Signing out doesn't do that: the Claims Assistant and Migration Advisor reopen the same
+conversation when the same person signs in again. Its header says what it needs.
 
 ## Where the boundary is
 

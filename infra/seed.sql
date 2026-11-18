@@ -152,7 +152,9 @@ INSERT INTO claims (claim_id, policy_id, status, opened_on, category, amount_ban
 INSERT INTO policy_access (user_id, policy_id) VALUES ('ana', 1042), ('ana', 1043);
 INSERT INTO policy_access (user_id, policy_id) SELECT 'sam', policy_id FROM policies;
 
-INSERT INTO agent_policy (key, value) VALUES ('writes_enabled', 'true');
+-- demo_reset changes on every reseed. Browsers compare it with the value they last saw, and forget
+-- the chat conversations they remember when it differs, so infra/reset.sh starts every chat fresh.
+INSERT INTO agent_policy (key, value) VALUES ('writes_enabled', 'true'), ('demo_reset', now()::text);
 
 COMMIT;
 

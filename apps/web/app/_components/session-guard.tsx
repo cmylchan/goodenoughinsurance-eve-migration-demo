@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { clearAllChats } from "./chat-history";
+import { checkDemoReset, clearLegacyChats } from "./chat-history";
 
 // Every tab of a browser profile shares one session cookie, and so do all private windows of
 // Chrome, Edge and Firefox. Signing in as someone else anywhere quietly changes who every open tab
@@ -34,6 +34,13 @@ export function SessionGuard({ userId }: { readonly userId: string }) {
     };
 
     announce(userId);
+    // After infra/reset.sh, forget every conversation and reload into a fresh chat.
+    void checkDemoReset().then((wasReset) => {
+      if (wasReset && !reloading) {
+        reloading = true;
+        window.location.reload();
+      }
+    });
     const channel = typeof BroadcastChannel === "undefined" ? undefined : new BroadcastChannel(CHANNEL);
     if (channel) channel.onmessage = (event: MessageEvent<Announcement>) => mismatch(event.data?.user ?? null);
 
@@ -69,8 +76,9 @@ export function AnnounceSignedOut() {
       .then((response) => (response.ok ? (response.json() as Promise<Announcement>) : undefined))
       .then((session) => {
         if (!session) return;
-        // Signed out: forget every conversation this browser kept, for every user.
-        if (session.user === null) clearAllChats();
+        // Signed out: forget the legacy agents' conversations. The eve conversations stay, and
+        // reopen when the same person signs in again; resetting the demo clears those.
+        if (session.user === null) clearLegacyChats();
         announce(session.user);
       })
       .catch(() => {});
