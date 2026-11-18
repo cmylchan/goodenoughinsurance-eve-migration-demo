@@ -26,6 +26,10 @@ export const notesSummariser = new ToolLoopAgent({
 
 Be brief and factual.`,
   tools: { get_claim_notes: getClaimNotes },
+  // Required by the type checker: a tool with a contextSchema needs its toolsContext on the
+  // constructor. The empty requester fails the tool's contextSchema (min(1)), so a call that
+  // skipped prepareCall reads nothing; prepareCall sets the signed-in user on every call.
+  toolsContext: { get_claim_notes: { requester: "" } },
   // Who is asking comes from the route, per call, from the signed-in session. Never from a header
   // or the conversation.
   callOptionsSchema: z.object({ requester: z.string().min(1) }),
