@@ -49,6 +49,23 @@ test("revokes the Vault token after a successful step", async () => {
   assert.equal(h.calls.at(-1), "POST /v1/auth/token/revoke-self", "revoke is the last thing that happens");
 });
 
+test("a deferred revoke runs after the answer, and still always runs", async () => {
+  const scheduled: (() => Promise<void>)[] = [];
+  const h = harness({ deferRevoke: (revoke) => void scheduled.push(revoke) });
+  assert.equal(await withDbCreds("reader", actor, async () => "ok", h.deps), "ok");
+  assert.equal(h.clientEnded(), 1, "the connection is closed before the answer is returned");
+  assert.equal(revoked(h.calls), 0, "the revoke has not run yet");
+  assert.equal(scheduled.length, 1, "exactly one revoke was handed off");
+  await scheduled[0]();
+  assert.equal(revoked(h.calls), 1);
+
+  // On failure too: the step throws, and the revoke is still handed off.
+  const failing: (() => Promise<void>)[] = [];
+  const f = harness({ deferRevoke: (revoke) => void failing.push(revoke) });
+  await assert.rejects(withDbCreds("reader", actor, async () => Promise.reject(new Error("query failed")), f.deps), /query failed/);
+  assert.equal(failing.length, 1);
+});
+
 test("revokes the Vault token when the step throws", async () => {
   const h = harness();
   await assert.rejects(withDbCreds("writer", actor, async () => Promise.reject(new Error("query failed")), h.deps), /query failed/);

@@ -44,6 +44,13 @@ export interface VaultDeps {
   tagSpan(attributes: Record<string, string>): void;
   /** Reads VAULT_ADDR, CLAIMS_DB_HOST and VERCEL_ENV: addresses and an environment name, no secrets. */
   env: Readonly<Record<string, string | undefined>>;
+  /**
+   * Optional: runs the revoke after the caller has its answer instead of before. A page passes
+   * Next's `after()`, so the reader isn't kept waiting while Vault drops the database user; the
+   * function stays alive until the revoke finishes. Tools leave it unset: a tool step revokes
+   * before it returns, so nothing outlives the step that asked for it.
+   */
+  deferRevoke?: (revoke: () => Promise<void>) => void;
 }
 
 const defaultDeps = (): VaultDeps => ({
@@ -58,8 +65,9 @@ export async function withDbCreds<T>(
   kind: CredentialKind,
   actor: Actor,
   fn: (db: DbClient, audit: LeaseAudit) => Promise<T>,
-  deps: VaultDeps = defaultDeps(),
+  overrides: Partial<VaultDeps> = {},
 ): Promise<T> {
+  const deps: VaultDeps = { ...defaultDeps(), ...overrides };
   const { VAULT_ADDR: vault, CLAIMS_DB_HOST: dbHost, VERCEL_ENV } = deps.env;
   if (!vault || !dbHost) throw new ClaimsRecordsUnavailableError("identity");
 
@@ -121,9 +129,16 @@ export async function withDbCreds<T>(
   } finally {
     // Rule 4: always revoke. revoke-self kills the token and its child lease, which drops the
     // database user. The 5-minute TTL is only the backstop if this call itself cannot reach Vault.
-    await deps
-      .fetch(`${vault}/v1/auth/token/revoke-self`, { method: "POST", headers: { "X-Vault-Token": vaultToken } })
-      .catch(() => {});
+    // The connection is already closed here, so a deferred revoke only moves when it happens.
+    const revoke = () =>
+      deps
+        .fetch(`${vault}/v1/auth/token/revoke-self`, { method: "POST", headers: { "X-Vault-Token": vaultToken } })
+        .then(
+          () => {},
+          () => {},
+        );
+    if (deps.deferRevoke) deps.deferRevoke(revoke);
+    else await revoke();
   }
 }
 
