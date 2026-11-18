@@ -4,7 +4,10 @@
 // code path that merges, and none that writes to the default branch.
 import { getToken } from "@vercel/connect";
 
-export const CONNECTOR = process.env.GITHUB_CONNECTOR ?? "github/ge-migrate";
+// The connector's UID in Vercel Connect, not the GitHub App's name: the app is "ge-migrate", and
+// `eve add channel/github --agent migration` registered its connector as "github/migration".
+// Set GITHUB_CONNECTOR when a deployment uses a connector with another UID.
+export const CONNECTOR = process.env.GITHUB_CONNECTOR ?? "github/migration";
 
 /** The repository this deployment was built from, and the branch a migration PR targets. */
 export function repository(): { owner: string; repo: string; base: string } {

@@ -1,5 +1,5 @@
 import { defineTool } from "eve/tools";
-import { always } from "eve/tools/approval";
+import type { ApprovalContext, ApprovalStatus } from "eve/tools/approval";
 import { z } from "zod";
 import { mayApprove, supervisorDecides } from "@ge/golden-path/approval";
 import { ClaimsRecordsUnavailableError, withDbCreds } from "@ge/golden-path/vault";
@@ -16,8 +16,11 @@ export default defineTool({
 
   // Golden-path rule 1: every write needs a human approval, and the wait is durable.
   // While the session waits, execute has not started, so no credential exists.
+  // Scope is checked before the approval is requested: a claim outside the requester's policies
+  // never reaches a supervisor's queue. eve runs this policy again after approval, so a change in
+  // access while the request waited is caught too; execute checks a third time with its own lease.
   approval: {
-    request: always(),
+    request: requestOnlyInScope,
     prompt: ({ input }) => `Flag claim ${input.claim_id} for review? Reason: ${input.reason}`,
     // Who may answer. Enforced by the agent, not by which buttons the browser shows:
     // only a supervisor can approve, and nobody can approve their own request.
@@ -49,12 +52,7 @@ export default defineTool({
       // 1. With a READ lease: is the claim in the requester's scope, and are writes enabled?
       //    If not, stop here. A writer credential is never minted.
       const gate = await withDbCreds("reader", actor, async (db) => {
-        const inScope = await db.query(
-          `SELECT 1 FROM claims c JOIN policy_access a ON a.policy_id = c.policy_id
-            WHERE c.claim_id = $1 AND a.user_id = $2`,
-          [claim_id, requester],
-        );
-        if (inScope.rowCount === 0) return "access_denied" as const;
+        if (!(await claimInScope(db, claim_id, requester))) return "access_denied" as const;
         return (await writesEnabled(db)) ? ("go" as const) : ("writes_disabled" as const);
       });
       if (gate === "access_denied") {
@@ -103,6 +101,42 @@ export default defineTool({
     }
   },
 });
+
+type Query = { query(text: string, values?: unknown[]): Promise<{ rowCount: number | null }> };
+
+/** The claim exists and sits on a policy the requester is assigned. One query, so the two are never told apart. */
+async function claimInScope(db: Query, claimId: number, requester: string): Promise<boolean> {
+  const result = await db.query(
+    `SELECT 1 FROM claims c JOIN policy_access a ON a.policy_id = c.policy_id
+      WHERE c.claim_id = $1 AND a.user_id = $2`,
+    [claimId, requester],
+  );
+  return (result.rowCount ?? 0) > 0;
+}
+
+/**
+ * Ask a supervisor only for a claim the requester may see. Out of scope and nonexistent get the
+ * same denial, so the request confirms nothing about claims on other policies.
+ */
+async function requestOnlyInScope({ session, toolInput }: ApprovalContext<{ claim_id: number }>): Promise<ApprovalStatus> {
+  const requester = session.auth.current?.principalId;
+  if (!requester || toolInput?.claim_id === undefined) {
+    return { type: "denied", reason: "No signed-in user. No approval was requested and nothing was written." };
+  }
+  try {
+    const allowed = await withDbCreds("reader", { requester }, (db) => claimInScope(db, toolInput.claim_id, requester));
+    if (allowed) return "user-approval";
+    return {
+      type: "denied",
+      reason: `The signed-in user may not flag claim ${toolInput.claim_id}. No approval was requested and nothing was written.`,
+    };
+  } catch (error) {
+    if (error instanceof ClaimsRecordsUnavailableError) {
+      return { type: "denied", reason: "Claims records can't be reached right now. No approval was requested and nothing was written." };
+    }
+    throw error;
+  }
+}
 
 // The runtime kill switch is data, read after approval, so flipping it stops waiting sessions too.
 async function writesEnabled(db: { query(text: string): Promise<{ rows: Record<string, unknown>[] }> }): Promise<boolean> {

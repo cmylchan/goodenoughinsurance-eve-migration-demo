@@ -32,7 +32,9 @@ const mono = Geist_Mono({
   preload: false,
 });
 
-export const viewport: Viewport = { themeColor: "#ffffff" };
+// interactiveWidget: on Android the on-screen keyboard shrinks the layout instead of covering it,
+// so a chat composer at the bottom of the screen stays in view while typing.
+export const viewport: Viewport = { themeColor: "#ffffff", interactiveWidget: "resizes-content" };
 
 export const metadata: Metadata = {
   title: "GoodEnough Insurance · Claims Assistant",

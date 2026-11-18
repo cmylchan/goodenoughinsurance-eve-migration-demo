@@ -1,9 +1,10 @@
 "use client";
 
-import { MessageSquareIcon } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { type Ref, useEffect, useRef } from "react";
 import { cn } from "@/lib/utils";
+import { AssistantIcon } from "./assistant-icon";
 import { ASSISTANT_PATH, isAssistantPage } from "./assistant-provider";
 
 const NAV = [
@@ -11,6 +12,8 @@ const NAV = [
   { href: ASSISTANT_PATH, label: "Assistant", active: isAssistantPage },
   { href: "/data", label: "Data", active: (path: string) => path.startsWith("/data") },
   { href: "/phone", label: "Phone", active: (path: string) => path.startsWith("/phone") },
+  { href: "/walkthrough", label: "Walkthrough", active: (path: string) => path.startsWith("/walkthrough") },
+  { href: "/submission", label: "SA Submission", active: (path: string) => path.startsWith("/submission") },
 ] as const;
 
 /** The main links. Without `highlight` it never reads the URL, so it can be a prerendered fallback. */
@@ -19,20 +22,28 @@ export function NavLinks({ highlight = false }: { readonly highlight?: boolean }
 }
 
 function HighlightedLinks() {
-  return <Links pathname={usePathname() ?? "/"} />;
+  const pathname = usePathname() ?? "/";
+  const nav = useRef<HTMLElement>(null);
+  // On a phone the links scroll sideways in their own row, and the last two start off screen:
+  // bring the current page's link into view. The copy of the nav that is hidden at this width
+  // has no box, so this does nothing there.
+  useEffect(() => {
+    nav.current?.querySelector('[aria-current="page"]')?.scrollIntoView({ block: "nearest", inline: "center" });
+  }, [pathname]);
+  return <Links navRef={nav} pathname={pathname} />;
 }
 
-function Links({ pathname }: { readonly pathname: string | undefined }) {
+function Links({ pathname, navRef }: { readonly pathname: string | undefined; readonly navRef?: Ref<HTMLElement> }) {
   return (
-    <nav aria-label="Main" className="flex items-center gap-1">
+    <nav aria-label="Main" className="flex items-center gap-1" ref={navRef}>
       {NAV.map((item) => {
         const active = pathname !== undefined && item.active(pathname);
         return (
           <Link
             aria-current={active ? "page" : undefined}
             className={cn(
-              "relative whitespace-nowrap px-3 py-2 text-[15px] transition-colors",
-              "after:absolute after:inset-x-3 after:-bottom-px after:h-0.5 after:origin-left after:scale-x-0 after:rounded-full after:bg-brand after:transition-transform",
+              "relative whitespace-nowrap px-2.5 py-2 text-[15px] transition-colors",
+              "after:absolute after:inset-x-2.5 after:-bottom-px after:h-0.5 after:origin-left after:scale-x-0 after:rounded-full after:bg-brand after:transition-transform",
               active ? "font-bold text-foreground after:scale-x-100" : "text-muted-foreground hover:text-foreground",
             )}
             href={item.href}
@@ -52,7 +63,7 @@ export function HeaderCta() {
   if (isAssistantPage(pathname)) return null;
   return (
     <Link className="cta header-cta hidden h-9 whitespace-nowrap px-4 text-xs lg:inline-flex" href={ASSISTANT_PATH}>
-      <MessageSquareIcon className="size-3.5" /> Ask the assistant
+      <AssistantIcon className="size-4" /> Ask the assistant
     </Link>
   );
 }

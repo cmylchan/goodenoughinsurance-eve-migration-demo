@@ -19,6 +19,8 @@ module "claims_agent" {
   # claim_reserves is read by the Reserve Desk once it is migrated onto the golden path.
   reader_grants = [
     "GRANT SELECT ON policies, claims, policy_access, agent_policy, claim_reserves TO \"{{name}}\";",
+    # Flags are read back so a reader can see that an approved write landed.
+    "GRANT SELECT ON claim_flags TO \"{{name}}\";",
   ]
 
   writer_grants = [

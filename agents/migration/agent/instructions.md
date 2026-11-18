@@ -18,9 +18,12 @@ has to work out what to type. Never skip a step and never run two steps in one t
    tools, data access, approvals, schedules, channels, secrets. Give a `file:line` for each fact.
    Keep it short. Ask whether to score it.
 3. **Baseline.** Call `run_scoreboard` for the legacy agent and `claims` (the golden-path agent), on
-   this deployment. Show the pass counts by category for both, side by side, and name each failing
-   case in plain words, using the `means` text ("Ana saw policy 2001"). Say which cases were skipped
-   and why. Ask whether to continue.
+   this deployment. When it returns, write the summary first, in your message, before you call
+   `ask_question`: one line with each agent's overall score, its `passed` out of its `total` cases
+   from the tool result ("<agent label>: <passed> of <total> cases passed"), then the pass counts by category
+   for both, side by side, then each failing case in plain words, using the `means` text ("Ana saw
+   policy 2001"). Say which cases were skipped and why. Scores are counts of cases, never money. Only
+   then ask whether to continue, repeating the two overall scores in the question.
 4. **Questions.** Ask only what the code cannot settle, one question at a time, each with what the
    code suggests and where: "Can a run wait on a person? Pending items are kept in memory
    (`desk.ts:42`), which suggests yes." Offer Yes / No / Not sure. If the code settles everything,

@@ -66,3 +66,70 @@ export function reportedReserve(turn: NormalizedTurn, claimId: number): number |
   }
   return undefined;
 }
+
+// ---- Reads: did the records tool really answer, and does the reply carry what it returned? ----
+
+/** Statuses every agent counts as open. A legacy tool that also returns closed claims is filtered here. */
+const OPEN = new Set(["open", "pending_review"]);
+
+interface ReadClaim {
+  readonly claim_id: number;
+  readonly status?: string;
+  readonly policy_id?: number;
+}
+
+/** Claims from every successful read in the turn, each tagged with its policy where the output says it. */
+function claimsRead(turn: NormalizedTurn): ReadClaim[] {
+  const seen = new Map<number, ReadClaim>();
+  for (const call of turn.toolCalls) {
+    if (call.name !== READ || call.status !== "completed") continue;
+    const output = call.output as { ok?: boolean; claims?: unknown; policy_id?: number; policyId?: number } | null;
+    if (output?.ok !== true || !Array.isArray(output.claims)) continue;
+    const policy = output.policy_id ?? output.policyId;
+    for (const row of output.claims as ReadClaim[]) {
+      if (typeof row?.claim_id !== "number") continue;
+      seen.set(row.claim_id, { ...row, policy_id: row.policy_id ?? (policy === undefined ? undefined : Number(policy)) });
+    }
+  }
+  return [...seen.values()];
+}
+
+/** The open claims a successful read returned for one policy. */
+export const openClaimsRead = (turn: NormalizedTurn, policyId: number) =>
+  claimsRead(turn).filter((c) => c.policy_id === policyId && (c.status === undefined || OPEN.has(c.status)));
+
+/** A read that returned `unavailable`, `access_denied` or an error does not count. */
+export const readSucceeded = (turn: NormalizedTurn) =>
+  check(
+    `${READ} returned records`,
+    turn.toolCalls.some(
+      (call) => call.name === READ && call.status === "completed" && (call.output as { ok?: boolean } | null)?.ok === true,
+    ),
+  );
+
+/** Both seeded datasets have open claims on 1042 and 1043, so an empty answer is a wrong answer. */
+export const returnedOpenClaims = (turn: NormalizedTurn, policyId: number) =>
+  check(`records returned open claims on policy ${policyId}`, openClaimsRead(turn, policyId).length > 0);
+
+const mentions = (text: string, value: number) => new RegExp(`(?<![\\d.])${value}(?![\\d.])`).test(text);
+
+const NUMBER_WORDS = ["no", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten"];
+
+/** The reply states this count, as a digit or a word ("0" may read as "no" or "none"). */
+export function statesCount(text: string, count: number): boolean {
+  if (mentions(text, count)) return true;
+  const word = NUMBER_WORDS[count];
+  if (word && new RegExp(`\\b${word}\\b`, "i").test(text)) return true;
+  return count === 0 && /\b(none|zero)\b/i.test(text);
+}
+
+/** Every listed claim id appears in the reply. Vacuously false when there are none to name. */
+export function namesClaims(turn: NormalizedTurn, ids: readonly number[], label: string): Check {
+  return check(label, ids.length > 0 && ids.every((id) => mentions(turn.reply, id)));
+}
+
+/** The reply gives the count of open claims the read returned for this policy. */
+export function statesOpenCount(turn: NormalizedTurn, policyId: number): Check {
+  const count = openClaimsRead(turn, policyId).length;
+  return check(`reply states the ${count} open claim(s) the records returned for policy ${policyId}`, count > 0 && statesCount(turn.reply, count));
+}

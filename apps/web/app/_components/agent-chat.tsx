@@ -11,8 +11,9 @@ import {
   type Activity,
 } from "eve/events";
 import type { UseEveAgentReturn } from "eve/react";
-import { AlertCircleIcon, BrainIcon, Loader2Icon, SquareIcon } from "lucide-react";
-import { Suspense, useState } from "react";
+import { AlertCircleIcon, BrainIcon, ClockIcon, Loader2Icon, SquareIcon, XIcon } from "lucide-react";
+import { usePathname } from "next/navigation";
+import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import {
   Conversation,
   ConversationContent,
@@ -30,7 +31,11 @@ import {
 import { Trace, TraceIcon, TraceLine, TraceTitle } from "@/components/ui/trace";
 import { cn } from "@/lib/utils";
 import { AgentMessage } from "./agent-message";
+import { hasOpenApproval } from "./open-approval";
+import { useDropStalePageData } from "./page-data-sync";
 import { useAssistant, useViewer } from "./assistant-provider";
+import { DEFAULT_AGENT } from "./chat-agents";
+import { pageContext, suggestionsFor, type PageContext } from "./demo-guide";
 import type { Viewer } from "@/lib/session";
 
 /** What an empty conversation shows: a heading, a line of help and starter prompts. */
@@ -41,30 +46,34 @@ export interface ChatIntro {
   readonly placeholder: string;
 }
 
-export function claimsIntro(canApprove: boolean): ChatIntro {
+const CLAIMS_BLURBS: Partial<Record<PageContext, string>> = {
+  data: "Ask about the claims behind any policy listed here, or ask to flag one for review.",
+  phone: "Ask to flag a claim, and the supervisors who may approve it get a text on their phone.",
+  walkthrough: "Try the prompts from the walkthrough here as you read.",
+};
+
+/** The Claims Assistant's empty state, with starter prompts for this page and this role. */
+export function claimsIntro(canApprove: boolean, page: PageContext): ChatIntro {
   return {
     title: "How can I help?",
     blurb:
-      "Ask about open claims on a policy you work on, or ask to flag a claim for review." +
+      (CLAIMS_BLURBS[page] ?? "Ask about open claims on a policy you work on, or ask to flag a claim for review.") +
       (canApprove ? " As a supervisor, you can approve flags others request." : " Flags wait for a supervisor's approval."),
-    suggestions: suggestionsFor(canApprove),
+    suggestions: suggestionsFor(DEFAULT_AGENT, page, canApprove),
     placeholder: "Ask about a policy or a claim…",
   };
 }
 
-/** Starter prompts, matched to what each role can do. */
-export function suggestionsFor(canApprove: boolean): readonly string[] {
-  return canApprove
-    ? [
-        "Summarize open claims for policy #2001.",
-        "Summarize open claims for policy #1042.",
-        "Show me the open claims for policy #3001.",
-      ]
-    : [
-        "Summarize open claims for policy #1042.",
-        "Flag claim 77 for review: possible duplicate invoice.",
-        "Show me the open claims for policy #2001.",
-      ];
+/** The Migration Advisor's empty state. */
+export function migrationIntro(page: PageContext, canApprove: boolean): ChatIntro {
+  return {
+    title: "Move a legacy agent onto the golden path",
+    blurb:
+      "I'll take you through it in seven steps: pick an agent, read its code, score it, ask what the code can't tell me, " +
+      "recommend a path, open a draft PR after you approve, and share the PR's preview with scores before and after.",
+    suggestions: suggestionsFor("migration", page, canApprove),
+    placeholder: "Answer, or ask about the assessment…",
+  };
 }
 
 /**
@@ -90,13 +99,14 @@ function LoadingConversation() {
 function AssistantChatBody({ variant }: { readonly variant: "page" | "panel" }) {
   const viewer = useViewer();
   const { agent, sessionId, sessionLink, ask } = useAssistant();
+  const page = pageContext(usePathname());
   if (!agent) return <LoadingConversation />;
   return (
     <EveChatBody
       agent={agent}
       ask={ask}
       canApprove={viewer.canApprove}
-      intro={claimsIntro(viewer.canApprove)}
+      intro={claimsIntro(viewer.canApprove, page)}
       sessionId={sessionId}
       sessionLink={sessionLink}
       variant={variant}
@@ -124,6 +134,14 @@ export function EveChatBody({
   readonly intro: ChatIntro;
 }) {
   const [cancellationError, setCancellationError] = useState<string>();
+  // A send that failed, or that never started a turn: what to say, and the text to send again.
+  const [sendError, setSendError] = useState<{ readonly message: string; readonly text?: string }>();
+  // The send still waiting for the agent to start a turn for it, if any.
+  const [inFlight, setInFlight] = useState<{ readonly text: string; readonly turns: number }>();
+  // Messages typed while an approval is open. eve would treat one as steering and withdraw the
+  // approval, so the supervisor's request would vanish and the call read as refused. They wait
+  // here instead and are sent, in order, once the approval is decided and the turn has finished.
+  const [queued, setQueued] = useState<readonly string[]>([]);
   const [hasInputText, setHasInputText] = useState(false);
   const compact = variant === "panel";
 
@@ -137,13 +155,69 @@ export function EveChatBody({
   const now = activity(agent.view);
   // Show what the agent is doing until its message has something to show, unless it waits on you.
   const showPendingThinking =
+    sendError === undefined &&
     isBusy &&
     now.kind !== "waiting-on-interaction" &&
     (lastMessage?.role !== "assistant" || isPendingAssistantShell);
   const failed = isBusy || isResuming ? undefined : failure(agent.view, turns(agent.view).at(-1)?.turnId);
-  const turnFailure =
-    failed?.code === "MODEL_CALL_FAILED" ? "The model is temporarily unavailable. Please try again." : failed?.message;
-  const errorMessage = cancellationError ?? agent.error?.message ?? turnFailure;
+  const approvalOpen = hasOpenApproval(agent.view);
+  useRefreshOnWrite(agent.messages);
+  // A provider's content filter ends the whole turn, and eve drops that message from the history,
+  // so a harmless question sent with a blocked one goes unanswered too. Say so, and offer a resend.
+  const refused = failed?.code === "MODEL_CALL_FAILED" && /filtered this response|refused this request/i.test(failed.message);
+  const turnFailure = refused
+    ? "The model provider's content filter blocked the reply, so nothing in that message was answered and nothing was written. " +
+      "If it asked for several things, send them one at a time, or try again."
+    : failed?.code === "MODEL_CALL_FAILED"
+      ? "The model is temporarily unavailable. Please try again."
+      : failed?.message;
+  const turnCount = turns(agent.view).length;
+  const turnCountRef = useRef(turnCount);
+  turnCountRef.current = turnCount;
+
+  // Every send goes through here, so a refused or lost message is said, never left as "Thinking".
+  const send = useCallback(
+    async (message: string | MessagePart[]) => {
+      const text = typeof message === "string" ? message : message.flatMap((part) => (part.type === "text" ? [part.text] : [])).join("\n");
+      setSendError(undefined);
+      // A message that steers a running turn starts no turn of its own, so there is nothing to wait for.
+      setInFlight(turnOpen ? undefined : { text, turns: turnCountRef.current });
+      try {
+        await ask(message);
+      } catch (error) {
+        setInFlight(undefined);
+        setSendError({ message: sendFailure(error), text: text || undefined });
+      }
+    },
+    [ask, turnOpen],
+  );
+
+  // Delivered once the agent has started a turn for it.
+  useEffect(() => {
+    if (inFlight && turnCount > inFlight.turns) setInFlight(undefined);
+  }, [inFlight, turnCount]);
+  // Not delivered after 20 seconds: say so rather than keep showing "Thinking".
+  useEffect(() => {
+    if (!inFlight) return;
+    const timer = setTimeout(() => {
+      setInFlight(undefined);
+      setSendError({
+        message:
+          "Your message hasn't reached the assistant. If someone signed in as another user in another window of this " +
+          "browser, reload this page. Otherwise, try again.",
+        text: inFlight.text || undefined,
+      });
+    }, 20_000);
+    return () => clearTimeout(timer);
+  }, [inFlight]);
+
+  const lastAsked = lastUserText(agent.messages);
+  const retry = sendError?.text
+    ? () => void send(sendError.text!)
+    : failed?.code === "MODEL_CALL_FAILED" && lastAsked !== undefined && cancellationError === undefined && agent.error === undefined
+      ? () => void send(lastAsked)
+      : undefined;
+  const errorMessage = sendError?.message ?? cancellationError ?? agent.error?.message ?? turnFailure;
   // A session that ended outside eve never settles its requests, so they stay open, yet it
   // accepts no answer. Once the server says so, stop offering them.
   const sessionEnded = agent.error instanceof ClientError && agent.error.code === "session_not_active";
@@ -161,14 +235,28 @@ export function EveChatBody({
     });
   };
 
+  // Send what waited once nothing is open: the approval decided and the agent done answering it.
+  const readyForQueued = queued.length > 0 && !approvalOpen && !turnOpen && !isBusy && !isResuming;
+  useEffect(() => {
+    if (!readyForQueued) return;
+    const text = queued.join("\n\n");
+    setQueued([]);
+    void send(text);
+  }, [readyForQueued, queued, send]);
+
   const handleSubmit = async (message: PromptInputMessage) => {
     const text = message.text.trim();
     if ((text.length === 0 && message.files.length === 0) || isResuming) return;
     setHasInputText(false);
     setCancellationError(undefined);
 
+    if (approvalOpen && message.files.length === 0) {
+      setQueued((list) => [...list, text]);
+      return;
+    }
+
     if (message.files.length === 0) {
-      await ask(text);
+      await send(text);
       return;
     }
     const parts: MessagePart[] = [];
@@ -176,7 +264,7 @@ export function EveChatBody({
     for (const file of message.files) {
       parts.push({ data: file.url, filename: file.filename, mediaType: file.mediaType, type: "file" });
     }
-    await ask(parts);
+    await send(parts);
   };
 
   const showEmptyState = isEmpty && !isResuming && errorMessage === undefined;
@@ -184,7 +272,7 @@ export function EveChatBody({
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       {showEmptyState ? (
-        <EmptyState compact={compact} intro={intro} onPick={(text) => void ask(text)} />
+        <EmptyState compact={compact} intro={intro} onPick={(text) => void send(text)} />
       ) : (
         <Conversation
           className="min-h-0 flex-1"
@@ -217,19 +305,36 @@ export function EveChatBody({
               ),
             )}
             {showPendingThinking ? <PendingActivity activity={now} /> : null}
-            {errorMessage ? <ErrorMessage message={errorMessage} /> : null}
+            {queued.map((text, index) => (
+              <QueuedMessage
+                key={`${index}:${text}`}
+                onRemove={() => setQueued((list) => list.filter((_, at) => at !== index))}
+                text={text}
+              />
+            ))}
+            {errorMessage ? (
+              <ErrorMessage
+                message={errorMessage}
+                onRetry={retry}
+                title={sendError ? "Not delivered" : refused ? "Reply blocked" : undefined}
+              />
+            ) : null}
           </ConversationContent>
           <ConversationScrollButton />
         </Conversation>
       )}
 
       <div className={cn("w-full shrink-0", compact ? "border-t bg-card p-3" : "mx-auto max-w-5xl px-4 pt-2 pb-6 sm:px-6")}>
+        {/* Once a conversation is under way the starter prompts move here, still matched to the page. */}
+        {!showEmptyState && !turnOpen && !isResuming ? (
+          <SuggestionChips onPick={(text) => void send(text)} suggestions={intro.suggestions} />
+        ) : null}
         <PromptInput onSubmit={handleSubmit}>
           <PromptInputTextarea
             className={compact ? "min-h-12" : undefined}
             disabled={isResuming}
             onChange={(event) => setHasInputText(event.currentTarget.value.trim().length > 0)}
-            placeholder={intro.placeholder}
+            placeholder={approvalOpen ? "Waiting on an approval. Messages you send now go once it's decided." : intro.placeholder}
           />
           <ComposerAction
             canCancel={turnOpen}
@@ -274,6 +379,31 @@ export function EmptyState({
   );
 }
 
+/** Starter prompts as a single scrolling row above the composer. */
+export function SuggestionChips({
+  suggestions,
+  onPick,
+}: {
+  readonly suggestions: readonly string[];
+  readonly onPick: (text: string) => void;
+}) {
+  if (suggestions.length === 0) return null;
+  return (
+    <div aria-label="Suggested prompts" className="-mx-1 mb-2 flex gap-1.5 overflow-x-auto px-1 pb-1 [scrollbar-width:none]" role="group">
+      {suggestions.map((text) => (
+        <button
+          className="shrink-0 rounded-full border bg-background px-3 py-1 text-muted-foreground text-xs transition-colors hover:border-brand/40 hover:bg-brand-soft hover:text-foreground"
+          key={text}
+          onClick={() => onPick(text)}
+          type="button"
+        >
+          {text}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 function ComposerAction({
   hasInputText,
   canCancel,
@@ -299,7 +429,86 @@ function ComposerAction({
   );
 }
 
-export function ErrorMessage({ message }: { readonly message: string }) {
+/** A message held until the open approval is decided, so it can't withdraw that approval. */
+function QueuedMessage({ text, onRemove }: { readonly text: string; readonly onRemove: () => void }) {
+  return (
+    <Message from="user">
+      <MessageContent className="opacity-70">
+        <p className="whitespace-pre-wrap">{text}</p>
+        <p className="mt-1 flex items-center gap-1.5 text-muted-foreground text-xs">
+          <ClockIcon className="size-3" />
+          Queued: sends once the approval is decided
+          <button
+            aria-label="Remove queued message"
+            className="ml-1 rounded p-0.5 hover:bg-muted"
+            onClick={onRemove}
+            type="button"
+          >
+            <XIcon className="size-3" />
+          </button>
+        </p>
+      </MessageContent>
+    </Message>
+  );
+}
+
+/**
+ * Pages keep some data in the browser for a short while (the Data page's policies and flags). When
+ * this conversation sees a flag written, drop those copies in every tab of this browser, so the
+ * flag shows at once wherever the person looks next. Flags already written when the chat loaded
+ * don't trigger it.
+ */
+function useRefreshOnWrite(messages: UseEveAgentReturn["messages"]) {
+  const dropStalePageData = useDropStalePageData();
+  const seen = useRef<Set<string> | undefined>(undefined);
+  const written = messages.flatMap((message) =>
+    message.parts.flatMap((part) =>
+      part.type === "tool" && part.name === "flag_claim" && (part.output as { written?: boolean } | undefined)?.written === true
+        ? [part.callId]
+        : [],
+    ),
+  );
+  const key = written.join(",");
+  useEffect(() => {
+    const ids = key ? key.split(",") : [];
+    if (seen.current === undefined) {
+      seen.current = new Set(ids);
+      return;
+    }
+    const fresh = ids.filter((id) => !seen.current!.has(id));
+    if (fresh.length === 0) return;
+    for (const id of fresh) seen.current.add(id);
+    dropStalePageData();
+  }, [key, dropStalePageData]);
+}
+
+/** What to tell the person when a message couldn't be sent. */
+function sendFailure(error: unknown): string {
+  if (error instanceof ClientError && (error.status === 401 || error.status === 403)) {
+    return "The assistant didn't accept this message as you. If someone signed in as another user in another window of this browser, reload this page.";
+  }
+  return error instanceof Error && error.message ? `Your message wasn't sent: ${error.message}` : "Your message wasn't sent. Try again.";
+}
+
+/** The text of the user's latest message, to send again after a failed turn. */
+function lastUserText(messages: UseEveAgentReturn["messages"]): string | undefined {
+  const last = [...messages].reverse().find((message) => message.role === "user");
+  const text = last?.parts
+    .flatMap((part) => (part.type === "text" ? [part.text] : []))
+    .join("\n")
+    .trim();
+  return text ? text : undefined;
+}
+
+export function ErrorMessage({
+  message,
+  title = "Request failed",
+  onRetry,
+}: {
+  readonly message: string;
+  readonly title?: string;
+  readonly onRetry?: () => void;
+}) {
   return (
     <Message className="max-w-full" from="assistant">
       <MessageContent>
@@ -309,8 +518,17 @@ export function ErrorMessage({ message }: { readonly message: string }) {
         >
           <AlertCircleIcon className="mt-0.5 size-4 shrink-0 text-destructive" />
           <div>
-            <p className="font-medium">Request failed</p>
+            <p className="font-medium">{title}</p>
             <p className="mt-0.5 text-muted-foreground">{message}</p>
+            {onRetry ? (
+              <button
+                className="mt-2 rounded-md border bg-background px-2.5 py-1 font-medium text-xs transition-colors hover:bg-muted"
+                onClick={onRetry}
+                type="button"
+              >
+                Try again
+              </button>
+            ) : null}
           </div>
         </div>
       </MessageContent>

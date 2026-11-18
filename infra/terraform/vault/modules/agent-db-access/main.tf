@@ -51,11 +51,16 @@ resource "vault_database_secret_backend_role" "this" {
 
   # Grants must go before the role can be dropped. Open sessions are closed first so a
   # revoked credential stops working immediately, not at the end of its connection.
-  revocation_statements = [
-    "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE usename = '{{name}}';",
-    "REVOKE ALL PRIVILEGES ON ALL TABLES IN SCHEMA public FROM \"{{name}}\";",
-    "DROP ROLE IF EXISTS \"{{name}}\";",
-  ]
+  #
+  # Each grant is undone by its own mirror image, so only the tables this role was granted are
+  # named. A blanket "REVOKE ... ON ALL TABLES IN SCHEMA public" fails outright as soon as the
+  # schema holds one table Vault's connection role has no privilege on, and then the user is
+  # never dropped: leftover users pile up until Postgres refuses to create any more.
+  revocation_statements = concat(
+    ["SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE usename = '{{name}}';"],
+    [for grant in each.value.grants : replace(replace(grant, "GRANT ", "REVOKE "), " TO \"{{name}}\"", " FROM \"{{name}}\"")],
+    ["DROP ROLE IF EXISTS \"{{name}}\";"],
+  )
 }
 
 # Vault policy globs only match at the end of a path, so each credential path is listed.

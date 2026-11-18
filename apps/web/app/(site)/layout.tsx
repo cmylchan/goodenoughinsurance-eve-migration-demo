@@ -2,6 +2,8 @@ import { LogOutIcon } from "lucide-react";
 import { type ReactNode, Suspense } from "react";
 import { AssistantBubble } from "@/app/_components/assistant-bubble";
 import { AssistantProvider } from "@/app/_components/assistant-provider";
+import { PageDataSync } from "@/app/_components/page-data-sync";
+import { SessionGuard } from "@/app/_components/session-guard";
 import { SiteFooter } from "@/app/_components/site-footer";
 import { SiteHeader } from "@/app/_components/site-header";
 import { signOut } from "@/app/login/actions";
@@ -19,7 +21,7 @@ export default function SiteLayout({ children }: { readonly children: ReactNode 
   const viewer = requireViewer();
   return (
     <AssistantProvider viewer={viewer}>
-      <div className="flex min-h-dvh flex-col bg-background text-foreground">
+      <div className="flex min-h-dvh flex-col bg-background text-foreground has-[[data-fills-viewport]]:h-dvh">
         <SiteHeader
           account={
             <Suspense fallback={<ViewerChipSkeleton />}>
@@ -29,12 +31,22 @@ export default function SiteLayout({ children }: { readonly children: ReactNode 
         />
         <div className="flex min-h-0 flex-1 flex-col">{children}</div>
         <SiteFooter />
+        <PageDataSync />
+        <Suspense fallback={null}>
+          <GuardSession />
+        </Suspense>
         <Suspense fallback={null}>
           <AssistantBubble />
         </Suspense>
       </div>
     </AssistantProvider>
   );
+}
+
+/** Keeps this tab's user in step with the browser's session cookie (see session-guard.tsx). */
+async function GuardSession() {
+  const viewer = await requireViewer();
+  return <SessionGuard userId={viewer.id} />;
 }
 
 async function ViewerChip() {
@@ -50,7 +62,7 @@ async function ViewerChip() {
         </span>
         <span className="hidden flex-col leading-tight lg:flex">
           <span className="font-bold text-sm">{viewer.displayName}</span>
-          <span className="text-muted-foreground text-xs">{viewer.title}</span>
+          <span className="whitespace-nowrap text-muted-foreground text-xs">{viewer.title}</span>
         </span>
       </span>
       <form action={signOut}>

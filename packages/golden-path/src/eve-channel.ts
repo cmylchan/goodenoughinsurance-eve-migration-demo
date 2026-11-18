@@ -1,6 +1,7 @@
 // Who may call a golden-path eve agent. Every agent's channels/eve.ts uses this one list, so a
 // change to sign-in reaches all of them.
 import { type AuthFn, localDev, oidc, vercelOidc } from "eve/channels/auth";
+import type { EveAuthFn } from "eve/channels/eve";
 import { userFromCookieHeader } from "./identity.ts";
 
 // The web chat calls the agent on the same domain, so the browser sends the login cookie along.
@@ -28,7 +29,36 @@ export const githubActionsEvalRunner = oidc({
   claims: { repository: ["cmylchan/goodenoughinsurance-eve-migration-demo"] },
 });
 
-export const goldenPathAuth = () => [
+/**
+ * The CI eval runner acting as a signed-in test user. Both proofs are needed on the same request:
+ * GitHub's OIDC token for this repository, and a session cookie the identity stand-in signed. A
+ * browser has no runner token, and the runner alone is nobody in policy_access.
+ *
+ * The session is marked (`evalRunner`), so the agent can tell an eval from a person: on production,
+ * an eval's approval request texts nobody's phone (see agents/claims/agent/channels/eve.ts).
+ *
+ * Outside production it is also the only caller allowed to open a session with tool stubs.
+ * Production never accepts stubs. A stub only replaces what a tool returns inside that one session:
+ * it can't reach data the user couldn't already see, and the real tool doesn't run.
+ */
+export const evalRunnerAsTestUser: EveAuthFn = async (request) => {
+  const user = await signedInUser(request);
+  if (!user || !(await githubActionsEvalRunner(request))) return null;
+  const marked = { ...user, attributes: { ...user.attributes, [EVAL_RUNNER]: "true" } };
+  return process.env.VERCEL_ENV === "production" ? marked : { ...marked, allowToolStubs: true };
+};
+
+const EVAL_RUNNER = "evalRunner";
+
+/** True for a session the CI eval runner drives, not a person. */
+export function isEvalRunner(auth: { readonly attributes?: Readonly<Record<string, unknown>> } | null | undefined): boolean {
+  return auth?.attributes?.[EVAL_RUNNER] === "true";
+}
+
+export const goldenPathAuth = (): EveAuthFn[] => [
+  // First, so the runner signed in as a test user is marked (and, outside production, may stub);
+  // everyone else falls through.
+  evalRunnerAsTestUser,
   signedInUser,
   githubActionsEvalRunner,
   // Lets the eve TUI, `eve eval` and this project's own deployments reach the agent.

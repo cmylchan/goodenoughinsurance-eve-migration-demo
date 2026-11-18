@@ -13,14 +13,105 @@
 .line,
 .solid,
 .far,
+.farSolid,
+.hill,
 .dash,
 .cloud,
+.wisp,
 .accent,
+.accentLine,
 .carBody,
 .glow,
+.shade,
+.detail,
 .smoke circle {
   vector-effect: non-scaling-stroke;
   stroke-width: 1.6;
+}
+
+/* Finer, paler strokes for texture: shingles, glazing bars, leaf curls. */
+.detail,
+.wisp {
+  fill: none;
+  stroke: var(--sketch);
+  stroke-width: 1.1;
+}
+
+.shade {
+  fill: color-mix(in srgb, var(--sketch) 22%, var(--background));
+  stroke: var(--sketch-strong);
+  stroke-width: 1.2;
+}
+
+.knob {
+  fill: var(--sketch-strong);
+}
+
+.farSolid {
+  fill: var(--background);
+  stroke: var(--sketch);
+}
+
+.hill {
+  fill: var(--background);
+  stroke: var(--sketch);
+  opacity: 0.55;
+}
+
+.town {
+  opacity: 0.75;
+}
+
+/* A row of lit windows is one dashed line. */
+.windows {
+  fill: none;
+  stroke: var(--sketch);
+  stroke-width: 4;
+  stroke-dasharray: 4 7;
+  stroke-linecap: butt;
+  opacity: 0.55;
+}
+
+.accentLine {
+  fill: none;
+  stroke: var(--brand);
+  stroke-width: 1.3;
+}
+
+.bloom {
+  fill: var(--brand);
+  opacity: 0.75;
+}
+
+.badge {
+  fill: var(--brand);
+}
+
+.badgeMark {
+  fill: var(--background);
+}
+
+.sign {
+  fill: var(--muted-foreground);
+  font-family: var(--font-serif);
+  font-size: 15px;
+  letter-spacing: -0.01em;
+}
+
+/* Porch lights and street lamps come on and off slowly, each on its own delay. */
+.lamp {
+  fill: var(--brand);
+  fill-opacity: 0.15;
+  stroke: var(--sketch-strong);
+  stroke-width: 1.2;
+  vector-effect: non-scaling-stroke;
+  animation: lamp 7s ease-in-out infinite;
+}
+
+.halo {
+  fill: var(--brand);
+  opacity: 0;
+  animation: halo 9s ease-in-out infinite;
 }
 
 .line {
@@ -94,7 +185,35 @@
   animation: bob 7s ease-in-out infinite alternate;
 }
 
-.tree {
+.balloonFar {
+  opacity: 0.8;
+  animation: bob 11s ease-in-out infinite alternate-reverse;
+}
+
+.rays {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: spin 80s linear infinite;
+}
+
+/* The walker crosses the street slowly, right to left, legs swinging from the hip. */
+.walker {
+  animation: stroll 120s linear infinite;
+  animation-delay: -38s;
+}
+
+.legA,
+.legB {
+  transform-box: fill-box;
+  transform-origin: 50% 0;
+  animation: stride 0.9s ease-in-out infinite alternate;
+}
+
+.legB {
+  animation-direction: alternate-reverse;
+}
+
+.sway {
   transform-box: fill-box;
   transform-origin: 50% 100%;
   animation: sway 6s ease-in-out infinite alternate;
@@ -192,6 +311,48 @@
   }
 }
 
+@keyframes lamp {
+  0%,
+  40%,
+  100% {
+    fill-opacity: 0.08;
+  }
+  55%,
+  88% {
+    fill-opacity: 0.55;
+  }
+}
+
+@keyframes halo {
+  0%,
+  40%,
+  100% {
+    opacity: 0;
+  }
+  55%,
+  88% {
+    opacity: 0.08;
+  }
+}
+
+@keyframes stroll {
+  from {
+    transform: translateX(1700px);
+  }
+  to {
+    transform: translateX(-100px);
+  }
+}
+
+@keyframes stride {
+  from {
+    transform: rotate(-20deg);
+  }
+  to {
+    transform: rotate(20deg);
+  }
+}
+
 @keyframes drive {
   from {
     transform: translateX(-180px);
@@ -215,6 +376,9 @@
   /* Park the moving pieces somewhere sensible. */
   .car {
     transform: translateX(1240px);
+  }
+  .walker {
+    transform: translateX(1040px);
   }
   .birds {
     transform: translate(860px, 100px);

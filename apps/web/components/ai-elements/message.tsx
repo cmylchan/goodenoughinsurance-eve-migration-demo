@@ -6,8 +6,6 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { cn } from "@/lib/utils";
 import { cjk } from "@streamdown/cjk";
 import { code } from "@streamdown/code";
-import { math } from "@streamdown/math";
-import { mermaid } from "@streamdown/mermaid";
 import type { UIMessage } from "ai";
 import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
 import type { ComponentProps, HTMLAttributes, ReactElement } from "react";
@@ -273,7 +271,10 @@ export const MessageBranchPage = ({ className, ...props }: MessageBranchPageProp
 
 export type MessageResponseProps = ComponentProps<typeof Streamdown>;
 
-const streamdownPlugins = { cjk, code, math, mermaid };
+// No math or diagram plugin: nothing these agents say is typeset maths or a Mermaid diagram, and
+// Mermaid (with the KaTeX it pulls in) is most of a megabyte of browser code. The README view,
+// which does draw diagrams, passes its own plugins and loads Mermaid only when it needs it.
+const streamdownPlugins = { cjk, code };
 
 export const MessageResponse = memo(
   ({ className, ...props }: MessageResponseProps) => (

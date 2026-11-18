@@ -1,6 +1,7 @@
-import { DatabaseIcon, FlaskConicalIcon, KeyRoundIcon, MessageSquareIcon, ShieldCheckIcon, TimerResetIcon } from "lucide-react";
+import { BookOpenIcon, FlaskConicalIcon, KeyRoundIcon, ShieldCheckIcon, TimerResetIcon } from "lucide-react";
 import Link from "next/link";
 import { Suspense } from "react";
+import { AssistantIcon } from "@/app/_components/assistant-icon";
 import { TrySteps, TryStepsSkeleton } from "@/app/_components/home-content";
 import { NeighborhoodScene } from "@/app/_components/neighborhood-scene";
 import { ASSISTANT_PATH } from "@/app/_components/paths";
@@ -20,7 +21,7 @@ const RULES = [
   {
     icon: FlaskConicalIcon,
     title: "Evals gate every deploy",
-    body: "Eighteen evals run against each deployment. Their result is a required Deployment Check, so a failing build can't be promoted.",
+    body: "21 evals gate every release: a preview runs all 21, and a production build runs the 15 safe on live data. The result is a required Deployment Check, so a failing build can't be promoted.",
   },
 ] as const;
 
@@ -34,23 +35,27 @@ export default function HomePage() {
     <main className="flex-1">
       <section className="relative overflow-hidden">
         <div className="relative z-10 mx-auto flex max-w-3xl flex-col items-center gap-6 px-4 pt-14 pb-[230px] text-center sm:px-6 md:pt-20 md:pb-[330px]">
-          <p className="font-bold text-brand text-xs uppercase tracking-[0.2em]">Claims operations portal</p>
+          <p className="font-bold text-brand text-xs uppercase tracking-[0.2em]">GoodEnough Insurance, built on Vercel</p>
           <h1 className="font-display text-[34px] leading-[1.3] md:text-[55px]">
-            A claims assistant that asks before it writes.
+            One golden path.
+            <br />
+            Every agent ships faster.
           </h1>
           <p className="max-w-xl text-lg leading-relaxed">
-            GoodEnough&apos;s adjusters and supervisors read claims and flag them for review by chatting with an AI
-            agent. It sees only the policies you&apos;re assigned, and every change waits for a human approval.
+            Vercel gives GoodEnough&apos;s teams one reviewed way to build and release AI agents: short-lived
+            credentials, a human approval on every write, and evals that gate each deploy.
+            <br />
+            Less plumbing for each team, and accelerated time to market.
           </p>
           <div className="mt-2 flex flex-wrap justify-center gap-3">
             <Link className="cta h-[60px] px-9 text-base md:px-11 md:text-lg" href={ASSISTANT_PATH}>
-              <MessageSquareIcon className="size-5" /> Open Claims Assistant
+              <AssistantIcon className="size-6" /> Open Claims Assistant
             </Link>
             <Link
               className="inline-flex h-[60px] items-center gap-2 rounded-[5px] border-2 border-foreground/80 bg-background/80 px-7 font-bold text-sm uppercase tracking-[0.02em] backdrop-blur transition-colors hover:border-brand hover:text-brand md:text-base"
-              href="/data"
+              href="/walkthrough"
             >
-              <DatabaseIcon className="size-4" /> View your policies
+              <BookOpenIcon className="size-4" /> Demo Walkthrough Guide
             </Link>
           </div>
         </div>

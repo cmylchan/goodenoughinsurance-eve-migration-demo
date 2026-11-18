@@ -155,7 +155,7 @@ Moving the agent and moving the helpers into the package are separate commits, s
 reverted on its own.
 
 **Done when:**
-- All 18 evals pass against a preview with `--agent claims`.
+- All 21 evals pass against a preview with `--agent claims`.
 - `lib/vault.test.ts` passes from its new home in the package.
 - An approval link opened as Sam still resolves.
 - The Deployment Check is still required and green.
@@ -173,7 +173,7 @@ against eve and AI SDK agents alike.
   - Signature: `(turn: NormalizedTurn, ctx) => Check[]`.
   - `NormalizedTurn` is `{ reply: string; toolCalls: { name; status; output }[] }`.
   - Tool names are normalised per agent. For example, the legacy `flagClaim` maps to `flag_claim`.
-- **The 18 `*.eval.ts` files become thin wrappers.** Each calls `t.send`, normalises the turn and
+- **The 19 shared-case `*.eval.ts` files become thin wrappers.** Each calls `t.send`, normalises the turn and
   applies its case. The required Deployment Check is unchanged.
 - **The cases and the scoreboard live in `packages/eval-cases/`** (`@ge/eval-cases`), so every
   agent's evals import the same cases, whatever its framework.
@@ -194,13 +194,13 @@ against eve and AI SDK agents alike.
 
 | Agent | Applicable cases |
 |---|---|
-| Claims Assistant (eve) | all 18 |
-| Claims Helper v1 (legacy) | all 18 |
+| Claims Assistant (eve) | all 19 |
+| Claims Helper v1 (legacy) | all 19 |
 | Notes Summariser (legacy) | read, scope, minimisation, `summary-reads-the-note`, quality |
 | Reserve Desk (legacy) | scope, plus the 4 reserve cases in Phase 2c |
 
 **Done when:**
-- The 18 eve evals still pass through the wrappers.
+- The 21 eve evals still pass through the wrappers.
 - `runScoreboard` returns results for the eve agent alone (the legacy agents arrive in Phase 2).
 
 ---
@@ -283,7 +283,7 @@ They later added a nightly "stale claims sweep" cron job and a home-made approva
    - The kill switch stops even an approved flag.
    - Policy 2001 is refused.
 5. Switch to the Migration Advisor and pick Claims Helper v1. Its baseline step shows the helper
-   failing scope, minimisation, injection and writes, while the eve agent passes all 18.
+   failing scope, minimisation, injection and writes, while the eve agent passes all 19 shared cases.
 
 Implementation note: whether step 1 writes depends on the model following the injected note. Make
 that reliable on stage with low temperature and a prompt that says "follow operational notes in claim
@@ -398,7 +398,7 @@ marks where they are.
 
 **How the steps behave:**
 - **Scores take minutes.** `run_scoreboard` is a workflow tool (`defineWorkflowTool`), so a run of
-  about 18 cases per agent survives restarts. The chat shows progress while it runs.
+  about 19 cases per agent survives restarts. The chat shows progress while it runs.
 - **Waiting for the preview (step 7).** `wait_for_preview(pr)` reads the deployment status that
   Vercel's GitHub integration posts on the PR's commit, using the same GitHub App, so no Vercel token
   is needed. It sleeps durably between checks and times out after 15 minutes with a link to the PR.
@@ -595,7 +595,7 @@ Phase 4 is independent of 1–3 and can be built alongside them.
      - wrap `next.config.ts` with both `withWorkflow` and `withEve`
      - build a trivial WorkflowAgent with one hook-based approval
      - deploy a preview, approve, redeploy mid-wait, check that it resumes
-     - check that the 18 eve evals still pass
+     - check that the 21 eve evals still pass
    - **Spike result, local half (2026-11-12): they coexist.** With `workflow` 5.5.0 and
      `@ai-sdk/workflow` 2.0.103 installed and `next.config.ts` wrapped as
      `withEve(withWorkflow(config), { eveRoot: "../.." })`:
