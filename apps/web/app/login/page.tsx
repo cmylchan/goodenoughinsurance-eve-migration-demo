@@ -3,6 +3,7 @@ import { Suspense } from "react";
 import { Logo } from "@/app/_components/logo";
 import { NeighborhoodScene } from "@/app/_components/neighborhood-scene";
 import { currentUser } from "@/lib/session";
+import { AnnounceSignedOut } from "@/app/_components/session-guard";
 import { LoginForm } from "./login-form";
 
 // Fully prerendered: the form ships as static HTML. Only the "already signed in?" check reads the
@@ -13,6 +14,7 @@ export default function LoginPage() {
       <Suspense fallback={null}>
         <RedirectIfSignedIn />
       </Suspense>
+      <AnnounceSignedOut />
       <div className="relative z-10 flex w-full max-w-md flex-col items-center gap-8">
         <Logo />
         <div className="flex flex-col gap-2 text-center">
@@ -24,7 +26,8 @@ export default function LoginPage() {
         </div>
         <p className="text-center text-muted-foreground text-xs">
           Demo environment with synthetic data. This login stands in for the corporate identity provider. To see both
-          roles at once, sign in as the other user in a private window.
+          roles at once, keep them in separate cookie stores: one normal window and one private window, or two
+          browsers. Private windows share one sign-in with each other.
         </p>
       </div>
       <div className="pointer-events-none absolute inset-x-0 bottom-0 h-[220px] md:h-[300px]">

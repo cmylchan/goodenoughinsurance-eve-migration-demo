@@ -3,6 +3,7 @@ import { type ReactNode, Suspense } from "react";
 import { AssistantBubble } from "@/app/_components/assistant-bubble";
 import { AssistantProvider } from "@/app/_components/assistant-provider";
 import { PageDataSync } from "@/app/_components/page-data-sync";
+import { SessionGuard } from "@/app/_components/session-guard";
 import { SiteFooter } from "@/app/_components/site-footer";
 import { SiteHeader } from "@/app/_components/site-header";
 import { signOut } from "@/app/login/actions";
@@ -32,11 +33,20 @@ export default function SiteLayout({ children }: { readonly children: ReactNode 
         <SiteFooter />
         <PageDataSync />
         <Suspense fallback={null}>
+          <GuardSession />
+        </Suspense>
+        <Suspense fallback={null}>
           <AssistantBubble />
         </Suspense>
       </div>
     </AssistantProvider>
   );
+}
+
+/** Keeps this tab's user in step with the browser's session cookie (see session-guard.tsx). */
+async function GuardSession() {
+  const viewer = await requireViewer();
+  return <SessionGuard userId={viewer.id} />;
 }
 
 async function ViewerChip() {
