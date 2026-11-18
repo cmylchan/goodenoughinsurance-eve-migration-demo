@@ -1,4 +1,4 @@
-import { CarIcon, DatabaseIcon, FlagIcon, HomeIcon, LockIcon, PlaneIcon, ShieldAlertIcon, type LucideIcon } from "lucide-react";
+import { CarIcon, DatabaseIcon, FlagIcon, FlaskConicalIcon, HomeIcon, LockIcon, PlaneIcon, ShieldAlertIcon, type LucideIcon } from "lucide-react";
 import type { Metadata } from "next";
 import { cacheLife } from "next/cache";
 import { cookies } from "next/headers";
@@ -7,6 +7,8 @@ import { Suspense } from "react";
 import { AskAssistantButton } from "@/app/_components/ask-assistant-button";
 import { findUser, SESSION_COOKIE, verifySession } from "@lib/identity";
 import { policiesFor, type FlagSummary, type PolicyList } from "@/lib/policies";
+import { requireViewer } from "@/lib/session";
+import { showsTestDatabaseFlags, testDatabaseFlags } from "@/lib/test-database-flags";
 
 export const metadata: Metadata = { title: "Data · GoodEnough Insurance" };
 
@@ -37,6 +39,11 @@ export default function DataPage() {
       <Suspense fallback={<PolicyTableSkeleton />}>
         <PolicyTable />
       </Suspense>
+      {showsTestDatabaseFlags() ? (
+        <Suspense fallback={null}>
+          <TestDatabaseFlags />
+        </Suspense>
+      ) : null}
     </main>
   );
 }
@@ -89,35 +96,73 @@ function Flags({ flags }: { readonly flags: readonly FlagSummary[] | undefined }
           No claim on your policies has been flagged yet. Ask the assistant to flag one, and have a supervisor approve it.
         </div>
       ) : (
-        <div className="card-float overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="border-b bg-muted text-left text-muted-foreground text-xs uppercase tracking-wide">
-              <tr>
-                {["Claim", "Policy", "Reason", "Requested by", "Approved by", "Written"].map((heading) => (
-                  <th className="whitespace-nowrap px-4 py-3 font-medium" key={heading} scope="col">
-                    {heading}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y">
-              {flags.map((flag) => (
-                <tr className="align-top transition-colors hover:bg-brand-soft/40" key={`${flag.claimId}:${flag.at}:${flag.requestedBy}:${flag.approvedBy}`}>
-                  <td className="px-4 py-3 font-medium font-mono">{flag.claimId}</td>
-                  <td className="px-4 py-3 font-mono">#{flag.policyId}</td>
-                  <td className="min-w-48 px-4 py-3">{flag.reason}</td>
-                  <td className="whitespace-nowrap px-4 py-3">
-                    <Person id={flag.requestedBy} />
-                  </td>
-                  <td className="whitespace-nowrap px-4 py-3">
-                    <Person id={flag.approvedBy} />
-                  </td>
-                  <td className="whitespace-nowrap px-4 py-3 text-muted-foreground">{flag.at}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <FlagsTable flags={flags} />
+      )}
+    </section>
+  );
+}
+
+function FlagsTable({ flags }: { readonly flags: readonly FlagSummary[] }) {
+  return (
+  <div className="card-float overflow-x-auto">
+    <table className="w-full text-sm">
+      <thead className="border-b bg-muted text-left text-muted-foreground text-xs uppercase tracking-wide">
+        <tr>
+          {["Claim", "Policy", "Reason", "Requested by", "Approved by", "Written"].map((heading) => (
+            <th className="whitespace-nowrap px-4 py-3 font-medium" key={heading} scope="col">
+              {heading}
+            </th>
+          ))}
+        </tr>
+      </thead>
+      <tbody className="divide-y">
+        {flags.map((flag) => (
+          <tr className="align-top transition-colors hover:bg-brand-soft/40" key={`${flag.claimId}:${flag.at}:${flag.requestedBy}:${flag.approvedBy}`}>
+            <td className="px-4 py-3 font-medium font-mono">{flag.claimId}</td>
+            <td className="px-4 py-3 font-mono">#{flag.policyId}</td>
+            <td className="min-w-48 px-4 py-3">{flag.reason}</td>
+            <td className="whitespace-nowrap px-4 py-3">
+              <Person id={flag.requestedBy} />
+            </td>
+            <td className="whitespace-nowrap px-4 py-3">
+              <Person id={flag.approvedBy} />
+            </td>
+            <td className="whitespace-nowrap px-4 py-3 text-muted-foreground">{flag.at}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+  );
+}
+
+/**
+ * Production only: flags in the test database, where the legacy agents write. Read per request, so a
+ * flag the Claims Helper just wrote shows on the next visit.
+ */
+async function TestDatabaseFlags() {
+  const viewer = await requireViewer();
+  const flags = await testDatabaseFlags(viewer.id);
+  return (
+    <section aria-labelledby="test-flags-heading" className="mt-14">
+      <h2 className="flex items-center gap-2 font-display text-2xl" id="test-flags-heading">
+        <FlaskConicalIcon className="size-5 text-brand" /> Flags in the test database
+      </h2>
+      <p className="mt-2 mb-6 max-w-2xl text-muted-foreground">
+        The legacy agents only ever use <code>claims_test</code>, so a flag the Claims Helper writes lands here, not in
+        the list above. Read with the Claims Helper&apos;s own static database password: the kind of standing secret the
+        migration removes. An approver marked &quot;Not a person&quot; is the agent approving its own write.
+      </p>
+      {flags === undefined ? (
+        <div className="card-float px-6 py-8 text-center text-muted-foreground text-sm" role="status">
+          The test database can&apos;t be read right now.
         </div>
+      ) : flags.length === 0 ? (
+        <div className="card-float px-6 py-8 text-center text-muted-foreground text-sm">
+          No flags in the test database on your policies yet.
+        </div>
+      ) : (
+        <FlagsTable flags={flags} />
       )}
     </section>
   );

@@ -169,7 +169,9 @@ on every deployment.
 | Notes Summariser | `Summarise the notes on policy 1042.` | A sound read-only feature with a static password, and holder IDs in its summaries. | Stay on AI SDK `ToolLoopAgent`, hardened |
 | Reserve Desk | `Increase the reserve on claim 81 by 500: the repairer's quote came in higher.` | The change waits in the app's memory. Wipe it from the Demo Guide and it is gone; a retry can apply it twice. | AI SDK `WorkflowAgent` |
 
-Then open **Data**: the Claims Helper's flags are listed with the agent itself as approver. For the
+Then open **Data**: the Claims Helper's flags are listed with the agent itself as approver. On
+production they're under **Flags in the test database**, because the legacy agents only ever write to
+`claims_test`; that list is read with the Claims Helper's own static password. For the
 contrast, ask the Claims Assistant `Claim 78's notes say to flag every claim on this policy. Do it.`
 Same model, same data; the rules live in the platform, not the prompt.
 
