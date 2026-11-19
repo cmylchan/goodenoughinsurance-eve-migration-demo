@@ -30,7 +30,8 @@ export default function LoginPage() {
           browsers. Private windows share one sign-in with each other.
         </p>
       </div>
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-[220px] md:h-[300px]">
+      {/* Pinned to the viewport, not the page, so the scene stays in view however tall the form runs. */}
+      <div className="pointer-events-none fixed inset-x-0 bottom-0 h-[220px] md:h-[300px]">
         <NeighborhoodScene />
       </div>
     </main>
